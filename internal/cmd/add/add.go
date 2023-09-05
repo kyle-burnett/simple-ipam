@@ -10,6 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+
+	"github.com/kyle-burnett/simple-ipam/internal/utils/checkvalidcidr"
 )
 
 var cidr, description, inputFilename string
@@ -55,7 +57,7 @@ func Add() {
 		log.Fatal("interface conversion: interface {} is nil, not map[string]interface {}")
 	}
 
-	checkValidCIDR(cidr)
+	checkvalidcidr.CheckValidCIDR(cidr)
 	addCIDR(prefixes, cidr)
 
 	updatedYAML, err := yaml.Marshal(&ipam)
