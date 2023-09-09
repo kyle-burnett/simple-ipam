@@ -186,7 +186,7 @@ func isSupernetOf(existingCIDR, cidrToAdd string) (bool bool) {
 //				10.10.0.0/22:
 //					10.10.0.0/24:
 func rearrangeIPAM(prefixes map[string]interface{}, cidrToAdd string) {
-	for existingCIDR, _ := range prefixes {
+	for existingCIDR := range prefixes {
 		// Don't add cidrToAdd under itself
 		if existingCIDR == cidrToAdd {
 			continue
