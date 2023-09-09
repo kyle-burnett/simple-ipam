@@ -20,6 +20,7 @@
 # Go workspace file
 go.work
 
+simple-ipam
 *.yaml
 *.yml
 !.github/*.yaml
