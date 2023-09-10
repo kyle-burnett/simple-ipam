@@ -37,8 +37,14 @@ func init() {
 	AddCmd.Flags().StringVarP(&inputFilename, "ipam-file", "i", "", "ipam file")
 	AddCmd.Flags().StringSliceVarP(&tags, "tags", "t", []string{}, "Tags to add to the CIDR")
 	AddCmd.Flags().BoolVarP(&print, "print", "p", false, "Print contents of the IPAM file to stdout")
-	AddCmd.MarkFlagRequired("cidr")
-	AddCmd.MarkFlagRequired("ipam-file")
+	err := AddCmd.MarkFlagRequired("cidr")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = AddCmd.MarkFlagRequired("ipam-file")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func Add() {
@@ -72,16 +78,6 @@ func Add() {
 	err = os.WriteFile(inputFilename, updatedYAML, 0644)
 	if err != nil {
 		log.Fatalf("Error writing YAML file: %v", err)
-	}
-}
-
-func checkValidCIDR(cidrToAdd string) {
-	_, existingNet, err := net.ParseCIDR(cidrToAdd)
-	if err != nil {
-		log.Fatalf("Error parsing existing CIDR: %v\n", err)
-	}
-	if cidr != existingNet.String() {
-		log.Fatalf("%v is not valid CIDR notation", cidr)
 	}
 }
 

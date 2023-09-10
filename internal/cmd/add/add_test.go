@@ -41,12 +41,17 @@ func Test_AddSubnet(t *testing.T) {
 			},
 		},
 	}
-	expectedYamlData, err := yaml.Marshal(&expectedYAML)
 
+	expectedYamlData, err := yaml.Marshal(&expectedYAML)
 	if err != nil {
 		fmt.Printf("Error while Marshaling. %v", err)
 	}
-	cmdSubnet.Execute()
+
+	err = cmdSubnet.Execute()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	ipamFile, err := os.ReadFile(testFile)
 	if err != nil {
 		t.Fatalf("Error reading YAML file: %v", err)
@@ -103,13 +108,17 @@ func Test_AddSupernet(t *testing.T) {
 			},
 		},
 	}
-	expectedYamlData, err := yaml.Marshal(&expectedYAML)
 
+	expectedYamlData, err := yaml.Marshal(&expectedYAML)
 	if err != nil {
 		fmt.Printf("Error while Marshaling. %v", err)
 	}
 
-	cmdSupernet.Execute()
+	err = cmdSupernet.Execute()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	ipamFile, err := os.ReadFile(testFile)
 	if err != nil {
 		t.Fatalf("Error reading YAML file: %v", err)
@@ -153,6 +162,7 @@ func createTestFile(fileName string) string {
 			},
 		},
 	}
+
 	yamlData, err := yaml.Marshal(&ipamData)
 	if err != nil {
 		fmt.Printf("Error while Marshaling. %v", err)

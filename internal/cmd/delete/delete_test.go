@@ -15,7 +15,9 @@ func Test_Delete(t *testing.T) {
 		fmt.Sprintf("-c=%s", "10.10.0.0/24"),
 		fmt.Sprintf("-i=%s", "testSubnet.yaml"),
 	})
+
 	testFile := createTestFile("testSubnet.yaml")
+
 	expectedYAML := IPAM{
 		IPAM: map[string]interface{}{
 			"description": "test",
@@ -28,12 +30,17 @@ func Test_Delete(t *testing.T) {
 			},
 		},
 	}
-	expectedYamlData, err := yaml.Marshal(&expectedYAML)
 
+	expectedYamlData, err := yaml.Marshal(&expectedYAML)
 	if err != nil {
 		fmt.Printf("Error while Marshaling. %v", err)
 	}
-	cmdDelete.Execute()
+
+	err = cmdDelete.Execute()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	ipamFile, err := os.ReadFile(testFile)
 	if err != nil {
 		t.Fatalf("Error reading YAML file: %v", err)
@@ -65,19 +72,25 @@ func Test_DeleteForce(t *testing.T) {
 		fmt.Sprintf("-i=%s", "testSubnet.yaml"),
 		"-f",
 	})
+
 	testFile := createTestFile("testSubnet.yaml")
+
 	expectedYAML := IPAM{
 		IPAM: map[string]interface{}{
 			"description": "test",
 			"prefixes":    map[string]interface{}{},
 		},
 	}
-	expectedYamlData, err := yaml.Marshal(&expectedYAML)
 
+	expectedYamlData, err := yaml.Marshal(&expectedYAML)
 	if err != nil {
 		fmt.Printf("Error while Marshaling. %v", err)
 	}
-	cmdDeleteSubnetFail.Execute()
+
+	err = cmdDeleteSubnetFail.Execute()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ipamFile, err := os.ReadFile(testFile)
 	if err != nil {
@@ -122,6 +135,7 @@ func createTestFile(fileName string) string {
 			},
 		},
 	}
+
 	yamlData, err := yaml.Marshal(&ipamData)
 	if err != nil {
 		fmt.Printf("Error while Marshaling. %v", err)

@@ -31,8 +31,14 @@ func init() {
 	DeleteCmd.Flags().StringVarP(&inputFilename, "ipam-file", "i", "", "ipam file")
 	DeleteCmd.Flags().BoolVarP(&print, "print", "p", false, "Print contents of the IPAM file to stdout")
 	DeleteCmd.Flags().BoolVarP(&force, "force", "f", false, "Delete a CIDR and all subnets under it")
-	DeleteCmd.MarkFlagRequired("cidr")
-	DeleteCmd.MarkFlagRequired("ipam-file")
+	err := DeleteCmd.MarkFlagRequired("cidr")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = DeleteCmd.MarkFlagRequired("ipam-file")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func Delete() {
