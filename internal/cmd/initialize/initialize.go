@@ -26,8 +26,14 @@ var InitCmd = &cobra.Command{
 func init() {
 	InitCmd.Flags().StringVarP(&file, "file", "f", "", "Root IPAM file to create")
 	InitCmd.Flags().StringVarP(&description, "description", "d", "", "Root IPAM file description")
-	InitCmd.MarkFlagRequired("file")
-	InitCmd.MarkFlagRequired("description")
+	err := InitCmd.MarkFlagRequired("file")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = InitCmd.MarkFlagRequired("description")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func Initialize() {

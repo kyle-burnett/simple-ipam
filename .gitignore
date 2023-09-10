@@ -23,4 +23,4 @@ go.work
 simple-ipam
 *.yaml
 *.yml
-!.github/*.yaml
+!.github/workflows/*.yml

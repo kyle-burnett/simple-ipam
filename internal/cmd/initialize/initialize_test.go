@@ -14,11 +14,16 @@ func Test_InitCommand(t *testing.T) {
 		fmt.Sprintf("-d=%s", "test"),
 		fmt.Sprintf("-f=%s", "test"),
 	})
-	cmd.Execute()
+	err := cmd.Execute()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	ipamFile, err := os.ReadFile("test.yaml")
 	if err != nil {
 		t.Fatalf("Error reading YAML file: %v", err)
 	}
+
 	expectedYAML := `
 ipam:
   description: test
