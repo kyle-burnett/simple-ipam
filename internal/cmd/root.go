@@ -7,22 +7,34 @@ import (
 	"github.com/kyle-burnett/simple-ipam/internal/cmd/delete"
 	"github.com/kyle-burnett/simple-ipam/internal/cmd/initialize"
 	"github.com/spf13/cobra"
+	"github.com/spf13/cobra/doc"
 )
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "simple-ipam",
 	Short: "Simple CLI IPAM Tool",
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
+var genDocsCmd = &cobra.Command{
+	Use:    "gendocs",
+	Hidden: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return generateMarkdownDocs(rootCmd)
+	},
+}
+
+func generateMarkdownDocs(cmd *cobra.Command) error {
+	return doc.GenMarkdownTree(cmd, "./docs")
+}
+
 func Execute() {
 	rootCmd.AddCommand(add.AddCmd)
 	rootCmd.AddCommand(delete.DeleteCmd)
 	rootCmd.AddCommand(initialize.InitCmd)
+	rootCmd.AddCommand(genDocsCmd)
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)

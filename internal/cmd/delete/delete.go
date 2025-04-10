@@ -5,18 +5,15 @@ import (
 	"log"
 	"os"
 
-	"github.com/kyle-burnett/simple-ipam/internal/utils/checkvalidcidr"
+	"github.com/kyle-burnett/simple-ipam/internal/models"
+	"github.com/kyle-burnett/simple-ipam/internal/utils/checkvalidsubnet"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
-var cidr, inputFilename string
+var subnet, inputFile string
 var print, force bool
-var ipam IPAM
-
-type IPAM struct {
-	IPAM map[string]interface{} `yaml:"ipam"`
-}
+var ipam models.IPAM
 
 var DeleteCmd = &cobra.Command{
 	Use:   "delete",
@@ -27,16 +24,18 @@ var DeleteCmd = &cobra.Command{
 }
 
 func init() {
-	DeleteCmd.Flags().StringVarP(&cidr, "cidr", "c", "", "CIDR to delete")
-	DeleteCmd.Flags().StringVarP(&inputFilename, "ipam-file", "i", "", "ipam file")
+	DeleteCmd.Flags().StringVarP(&subnet, "subnet", "s", "", "subnet to Add")
+	DeleteCmd.Flags().StringVarP(&inputFile, "file", "f", "", "ipam file")
+	DeleteCmd.MarkFlagRequired("subnet")
+	DeleteCmd.MarkFlagRequired("file")
 	DeleteCmd.Flags().BoolVarP(&print, "print", "p", false, "Print contents of the IPAM file to stdout")
-	DeleteCmd.Flags().BoolVarP(&force, "force", "f", false, "Delete a CIDR and all subnets under it")
-	DeleteCmd.MarkFlagRequired("cidr")
+	DeleteCmd.Flags().BoolVarP(&force, "recursive", "r", false, "Delete a CIDR and all subnets under it")
+	DeleteCmd.MarkFlagRequired("subnet")
 	DeleteCmd.MarkFlagRequired("ipam-file")
 }
 
 func Delete() {
-	ipamFile, err := os.ReadFile(inputFilename)
+	ipamFile, err := os.ReadFile(inputFile)
 	if err != nil {
 		log.Fatal("Error reading YAML file:", err)
 	}
@@ -46,13 +45,8 @@ func Delete() {
 		log.Fatalf("Error unmarshaling YAML: %v", err)
 	}
 
-	prefixes, ok := ipam.IPAM["prefixes"].(map[string]interface{})
-	if !ok {
-		log.Fatal("interface conversion: interface {} is nil, not map[string]interface {}")
-	}
-
-	checkvalidcidr.CheckValidCIDR(cidr)
-	deleteCIDR(prefixes, cidr)
+	checkvalidsubnet.CheckValidSubnet(subnet)
+	deleteCIDR(ipam.Subnets, subnet)
 
 	updatedYAML, err := yaml.Marshal(&ipam)
 	if err != nil {
@@ -63,32 +57,37 @@ func Delete() {
 		fmt.Println(string(updatedYAML))
 	}
 
-	err = os.WriteFile(inputFilename, updatedYAML, 0644)
+	err = os.WriteFile(inputFile, updatedYAML, 0644)
 	if err != nil {
 		log.Fatalf("Error writing YAML file: %v", err)
 	}
 }
 
-func deleteCIDR(prefixes map[string]interface{}, cidrToDelete string) {
-	if _, ok := prefixes[cidrToDelete]; ok {
-		subnetsExist := checkForSubnets(prefixes[cidrToDelete])
-		if subnetsExist && !force {
-			log.Fatalf("Cannot delete %v as subnets are defined under it. Use '-f' or '--force' to delete %v and everything defined under it", cidr, cidr)
+func deleteCIDR(allSubnets map[string]models.Subnets, subnetToDelete string) {
+	if _, ok := allSubnets[subnetToDelete]; ok {
+		if len(allSubnets[subnetToDelete].Subnets) > 0 && !force {
+			log.Fatalf("Cannot delete %[1]s as subnets are defined under it. Use '-r' or '--recursive' to delete %[1]s and everything defined under it", subnetToDelete)
 		} else {
-			delete(prefixes, cidrToDelete)
+			delete(allSubnets, subnetToDelete)
 		}
 	}
-	for _, v := range prefixes {
-		if subdata, ok := v.(map[string]interface{}); ok {
-			deleteCIDR(subdata, cidrToDelete)
+	for _, v := range allSubnets {
+		if _, ok := v.Subnets[subnetToDelete]; ok {
+			if len((v.Subnets)[subnetToDelete].Subnets) > 0 && !force {
+				log.Fatalf("Cannot delete %[1]s as subnets are defined under it. Use '-r' or '--recursive' to delete %[1]s and everything defined under it", subnetToDelete)
+			} else {
+				delete(v.Subnets, subnetToDelete)
+			}
+		} else {
+			deleteCIDR(v.Subnets, subnetToDelete)
 		}
 	}
 }
 
-func checkForSubnets(prefixes interface{}) bool {
-	if subnets, ok := prefixes.(map[string]interface{}); ok {
-		subnet_map := subnets["subnets"].(map[string]interface{})
-		return len(subnet_map) != 0
-	}
-	return true
-}
+// func checkForSubnets(prefixes interface{}) bool {
+// 	if subnets, ok := prefixes.(map[string]interface{}); ok {
+// 		subnet_map := subnets["subnets"].(map[string]interface{})
+// 		return len(subnet_map) != 0
+// 	}
+// 	return true
+// }

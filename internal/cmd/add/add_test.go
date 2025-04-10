@@ -6,34 +6,32 @@ import (
 	"os"
 	"testing"
 
+	"github.com/kyle-burnett/simple-ipam/internal/models"
 	"gopkg.in/yaml.v3"
 )
 
 func Test_AddSubnet(t *testing.T) {
 	cmdSubnet := AddCmd
 	cmdSubnet.SetArgs([]string{
-		fmt.Sprintf("-d=%s", "test cidr"),
-		fmt.Sprintf("-c=%s", "10.10.0.0/25"),
-		fmt.Sprintf("-i=%s", "testSubnet.yaml"),
+		fmt.Sprintf("-d=%s", "test subnet"),
+		fmt.Sprintf("-s=%s", "10.10.0.0/25"),
+		fmt.Sprintf("-f=%s", "testSubnet.yaml"),
 	})
 	testFile := createTestFile("testSubnet.yaml")
-	expectedYAML := IPAM{
-		IPAM: map[string]interface{}{
-			"description": "test",
-			"prefixes": map[string]interface{}{
-				"10.10.0.0/20": map[string]interface{}{
-					"cidr_tags":   []string{"tag_1", "tag_2"},
-					"description": "test cidr",
-					"subnets": map[string]interface{}{
-						"10.10.0.0/24": map[string]interface{}{
-							"cidr_tags":   []string{"tag_1", "tag_2"},
-							"description": "test cidr",
-							"subnets": map[string]interface{}{
-								"10.10.0.0/25": map[string]interface{}{
-									"cidr_tags":   []string{},
-									"description": "test cidr",
-									"subnets":     map[string]interface{}{},
-								},
+	expectedYAML := models.IPAM{
+		Subnets: map[string]models.Subnets{
+			"10.10.0.0/20": {
+				Description: "test subnet",
+				Tags:        []string{"tag_1", "tag_2"},
+				Subnets: map[string]models.Subnets{
+					"10.10.0.0/24": {
+						Description: "test subnet",
+						Tags:        []string{"tag_1", "tag_2"},
+						Subnets: map[string]models.Subnets{
+							"10.10.0.0/25": {
+								Description: "test subnet",
+								Tags:        []string{},
+								Subnets:     map[string]models.Subnets{},
 							},
 						},
 					},
@@ -74,28 +72,25 @@ func Test_AddSubnet(t *testing.T) {
 func Test_AddSupernet(t *testing.T) {
 	cmdSupernet := AddCmd
 	cmdSupernet.SetArgs([]string{
-		fmt.Sprintf("-d=%s", "test cidr"),
-		fmt.Sprintf("-c=%s", "10.10.0.0/22"),
-		fmt.Sprintf("-i=%s", "testSupernet.yaml"),
+		fmt.Sprintf("-d=%s", "test subnet"),
+		fmt.Sprintf("-s=%s", "10.10.0.0/22"),
+		fmt.Sprintf("-f=%s", "testSupernet.yaml"),
 	})
 	testFile := createTestFile("testSupernet.yaml")
-	expectedYAML := IPAM{
-		IPAM: map[string]interface{}{
-			"description": "test",
-			"prefixes": map[string]interface{}{
-				"10.10.0.0/20": map[string]interface{}{
-					"cidr_tags":   []string{"tag_1", "tag_2"},
-					"description": "test cidr",
-					"subnets": map[string]interface{}{
-						"10.10.0.0/22": map[string]interface{}{
-							"cidr_tags":   []string{},
-							"description": "test cidr",
-							"subnets": map[string]interface{}{
-								"10.10.0.0/24": map[string]interface{}{
-									"cidr_tags":   []string{"tag_1", "tag_2"},
-									"description": "test cidr",
-									"subnets":     map[string]interface{}{},
-								},
+	expectedYAML := models.IPAM{
+		Subnets: map[string]models.Subnets{
+			"10.10.0.0/20": {
+				Description: "test subnet",
+				Tags:        []string{"tag_1", "tag_2"},
+				Subnets: map[string]models.Subnets{
+					"10.10.0.0/22": {
+						Description: "test subnet",
+						Tags:        []string{},
+						Subnets: map[string]models.Subnets{
+							"10.10.0.0/24": {
+								Description: "test subnet",
+								Tags:        []string{"tag_1", "tag_2"},
+								Subnets:     map[string]models.Subnets{},
 							},
 						},
 					},
@@ -135,19 +130,16 @@ func Test_AddSupernet(t *testing.T) {
 }
 
 func createTestFile(fileName string) string {
-	ipamData := IPAM{
-		IPAM: map[string]interface{}{
-			"description": "test",
-			"prefixes": map[string]interface{}{
-				"10.10.0.0/20": map[string]interface{}{
-					"cidr_tags":   []string{"tag_1", "tag_2"},
-					"description": "test cidr",
-					"subnets": map[string]interface{}{
-						"10.10.0.0/24": map[string]interface{}{
-							"cidr_tags":   []string{"tag_1", "tag_2"},
-							"description": "test cidr",
-							"subnets":     map[string]interface{}{},
-						},
+	ipamData := models.IPAM{
+		Subnets: map[string]models.Subnets{
+			"10.10.0.0/20": {
+				Description: "test subnet",
+				Tags:        []string{"tag_1", "tag_2"},
+				Subnets: map[string]models.Subnets{
+					"10.10.0.0/24": {
+						Description: "test subnet",
+						Tags:        []string{"tag_1", "tag_2"},
+						Subnets:     map[string]models.Subnets{},
 					},
 				},
 			},

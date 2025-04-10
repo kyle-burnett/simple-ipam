@@ -9,48 +9,44 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/cobra/doc"
 	"gopkg.in/yaml.v3"
 
-	"github.com/kyle-burnett/simple-ipam/internal/utils/checkvalidcidr"
+	"github.com/kyle-burnett/simple-ipam/internal/models"
+	"github.com/kyle-burnett/simple-ipam/internal/utils/checkvalidsubnet"
 )
 
-var cidr, description, inputFilename string
+var subnet, description, inputFile string
 var tags []string
 var print bool
-var ipam IPAM
-
-type IPAM struct {
-	IPAM map[string]interface{} `yaml:"ipam"`
-}
+var ipam models.IPAM
 
 var AddCmd = &cobra.Command{
 	Use:   "add",
-	Short: "Add a prefix to an IPAM file",
+	Short: "Add a subnet to an IPAM file",
 	Run: func(cmd *cobra.Command, args []string) {
+		err := doc.GenMarkdownTree(cmd, "./docs")
+		if err != nil {
+			log.Fatal(err)
+		}
 		Add()
 	},
 }
 
 func init() {
-	AddCmd.Flags().StringVarP(&cidr, "cidr", "c", "", "CIDR to Add")
-	AddCmd.Flags().StringVarP(&description, "description", "d", "", "CIDR to Add")
-	AddCmd.Flags().StringVarP(&inputFilename, "ipam-file", "i", "", "ipam file")
-	AddCmd.Flags().StringSliceVarP(&tags, "tags", "t", []string{}, "Tags to add to the CIDR")
+	AddCmd.Flags().StringVarP(&subnet, "subnet", "s", "", "subnet to Add")
+	AddCmd.Flags().StringVarP(&inputFile, "file", "f", "", "ipam file")
+	AddCmd.MarkFlagRequired("subnet")
+	AddCmd.MarkFlagRequired("file")
+	AddCmd.Flags().StringVarP(&description, "description", "d", "", "subnet to Add")
+	AddCmd.Flags().StringSliceVarP(&tags, "tags", "t", []string{}, "Tags to add to the subnet")
 	AddCmd.Flags().BoolVarP(&print, "print", "p", false, "Print contents of the IPAM file to stdout")
-	err := AddCmd.MarkFlagRequired("cidr")
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = AddCmd.MarkFlagRequired("ipam-file")
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func Add() {
-	ipamFile, err := os.ReadFile(inputFilename)
+	ipamFile, err := os.ReadFile(inputFile)
 	if err != nil {
-		log.Fatal("Error reading YAML file:", err)
+		log.Fatalf("Error reading YAML file %v:", err)
 	}
 
 	err = yaml.Unmarshal(ipamFile, &ipam)
@@ -58,13 +54,9 @@ func Add() {
 		log.Fatalf("Error unmarshaling YAML: %v", err)
 	}
 
-	prefixes, ok := ipam.IPAM["prefixes"].(map[string]interface{})
-	if !ok {
-		log.Fatal("interface conversion: interface {} is nil, not map[string]interface {}")
-	}
-
-	checkvalidcidr.CheckValidCIDR(cidr)
-	addCIDR(prefixes, cidr)
+	checkvalidsubnet.CheckValidSubnet(subnet)
+	allSubnets := ipam.Subnets
+	addsubnet(allSubnets, subnet)
 
 	updatedYAML, err := yaml.Marshal(&ipam)
 	if err != nil {
@@ -75,98 +67,91 @@ func Add() {
 		fmt.Println(string(updatedYAML))
 	}
 
-	err = os.WriteFile(inputFilename, updatedYAML, 0644)
+	err = os.WriteFile(inputFile, updatedYAML, 0644)
 	if err != nil {
 		log.Fatalf("Error writing YAML file: %v", err)
 	}
 }
 
-// Add a new CIDR to an IPAM file. This will iterate through the IPAM
-// hierarchy to check if cidrToAdd is a subnet of any existing CIDR
-// in the IPAM file. If it is, cidrToAdd is added directly under
-// the longest CIDR that it is a subnet of.
-func addCIDR(prefixes map[string]interface{}, cidrToAdd string) {
-	for existingCIDR, existingValue := range prefixes {
-		if existingCIDR == cidrToAdd {
-			log.Fatalf("%v already exists in this IPAM file.\n", cidrToAdd)
+// Add a new subnet to an IPAM file.
+func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd string) {
+	for subnet, values := range allSubnets {
+		if subnet == subnetToAdd {
+			log.Fatalf("%#v already exists in this IPAM file.\n", subnetToAdd)
 		}
-		if isSubnetOf(existingCIDR, cidrToAdd) {
-			if subnets, ok := existingValue.(map[string]interface{}); ok {
-				subnet_map := subnets["subnets"].(map[string]interface{})
-				// If we reach the last value in a given prefix hierarchy (subnets: {}), add cidrToAdd
-				// to the subnets key of that prefix
-				if len(subnet_map) == 0 {
-					subnets["subnets"].(map[string]interface{})[cidrToAdd] = map[string]interface{}{
-						"description": description,
-						"cidr_tags":   tags,
-						"subnets":     make(map[string]interface{}),
+		if isSubnetOf(subnet, subnetToAdd) {
+			// We reached the end. No need to continue checking.
+			if len(values.Subnets) == 0 {
+				if _, ok := values.Subnets[subnetToAdd]; !ok {
+					values.Subnets[subnetToAdd] = models.Subnets{
+						Description: description,
+						Tags:        tags,
+						Subnets:     map[string]models.Subnets{},
 					}
-					return
-				} else {
-					addCIDR(subnet_map, cidrToAdd)
 				}
 				return
+			} else {
+				addsubnet(values.Subnets, subnetToAdd)
 			}
+			return
 		}
 	}
-	prefixes[cidrToAdd] = map[string]interface{}{
-		"description": description,
-		"cidr_tags":   tags,
-		"subnets":     make(map[string]interface{}),
+	allSubnets[subnetToAdd] = models.Subnets{
+		Description: description,
+		Tags:        tags,
+		Subnets:     map[string]models.Subnets{},
 	}
-	// If needed, rearrange the IPAM file to maintain a correct CIDR hierarchy
-	// For example, maybe a shorter prefix was added and any longer prefixes need
-	// to be moved under it
-	rearrangeIPAM(prefixes, cidrToAdd)
+	// Re-arrange the IPAM file to keep the newly added subnet in order
+	rearrangeSubnets(allSubnets, subnetToAdd)
 }
 
-// Check if cidrToAdd is a subnet of existingCIDR
-func isSubnetOf(existingCIDR, cidrToAdd string) (bool bool) {
-	_, existingNet, err := net.ParseCIDR(existingCIDR)
+// Check if subnetToAdd is a subnet of parent subnet
+func isSubnetOf(subnet, subnetToAdd string) bool {
+	_, existingNet, err := net.ParseCIDR(subnet)
 	if err != nil {
-		log.Fatalf("Error parsing existing CIDR: %v", err)
+		log.Fatalf("Error parsing existing subnet: %v", err)
 	}
 
-	_, cidrNet, err := net.ParseCIDR(cidrToAdd)
+	_, subnetNet, err := net.ParseCIDR(subnetToAdd)
 	if err != nil {
-		log.Fatalf("Error parsing CIDR to add: %v", err)
+		log.Fatalf("Error parsing subnet to add: %v", err)
 	}
 
-	existingCIDRMask, _ := strconv.Atoi(strings.Split(existingCIDR, "/")[1])
-	cidrToAddMask, _ := strconv.Atoi(strings.Split(cidrToAdd, "/")[1])
+	existingsubnetMask, _ := strconv.Atoi(strings.Split(subnet, "/")[1])
+	subnetToAddMask, _ := strconv.Atoi(strings.Split(subnetToAdd, "/")[1])
 
-	if existingNet.Contains(cidrNet.IP) {
-		return cidrToAddMask >= existingCIDRMask
+	if existingNet.Contains(subnetNet.IP) {
+		return subnetToAddMask >= existingsubnetMask
 	}
 
 	return false
 }
 
-// Check if cidrToAdd is a supernet of existingCIDR
-func isSupernetOf(existingCIDR, cidrToAdd string) (bool bool) {
-	// Parse the existing CIDR
-	_, existingNet, err := net.ParseCIDR(existingCIDR)
+// Check if subnetToAdd is a supernet of existingsubnet
+func isSupernetOf(existingsubnet, subnetToAdd string) (bool bool) {
+	// Parse the existing subnet
+	_, existingNet, err := net.ParseCIDR(existingsubnet)
 	if err != nil {
-		log.Fatalf("Error parsing existing CIDR: %v", err)
+		log.Fatalf("Error parsing existing subnet: %v", err)
 	}
 
-	// Parse the CIDR to add
-	_, cidrNet, err := net.ParseCIDR(cidrToAdd)
+	// Parse the subnet to add
+	_, subnetNet, err := net.ParseCIDR(subnetToAdd)
 	if err != nil {
-		log.Fatalf("Error parsing CIDR to add: %v", err)
+		log.Fatalf("Error parsing subnet to add: %v", err)
 	}
 
-	existingCIDRMask, _ := strconv.Atoi(strings.Split(existingCIDR, "/")[1])
-	cidrToAddMask, _ := strconv.Atoi(strings.Split(cidrToAdd, "/")[1])
+	existingsubnetMask, _ := strconv.Atoi(strings.Split(existingsubnet, "/")[1])
+	subnetToAddMask, _ := strconv.Atoi(strings.Split(subnetToAdd, "/")[1])
 
-	if cidrNet.Contains(existingNet.IP) {
-		return cidrToAddMask <= existingCIDRMask
+	if subnetNet.Contains(existingNet.IP) {
+		return subnetToAddMask <= existingsubnetMask
 	}
 
 	return false
 }
 
-// If needed, rearrange the IPAM hierarchy after adding a new CIDR.
+// Re-arrange the IPAM hierarchy after adding a new subnet.
 // For example if we have:
 //
 //	prefixes:
@@ -181,18 +166,18 @@ func isSupernetOf(existingCIDR, cidrToAdd string) (bool bool) {
 //			10.10.0.0/21:
 //				10.10.0.0/22:
 //					10.10.0.0/24:
-func rearrangeIPAM(prefixes map[string]interface{}, cidrToAdd string) {
-	for existingCIDR := range prefixes {
-		// Don't add cidrToAdd under itself
-		if existingCIDR == cidrToAdd {
+func rearrangeSubnets(allSubnets map[string]models.Subnets, subnetToAdd string) {
+	for subnet, values := range allSubnets {
+		// Don't add subnetToAdd under itself
+		if subnet == subnetToAdd {
 			continue
 		}
-		if isSupernetOf(existingCIDR, cidrToAdd) {
-			childMap, _ := prefixes[existingCIDR].(map[string]interface{})
-			if subnets, ok := prefixes[cidrToAdd].(map[string]interface{}); ok {
-				subnet_map := subnets["subnets"].(map[string]interface{})
-				subnet_map[existingCIDR] = childMap
-				delete(prefixes, existingCIDR)
+		if isSupernetOf(subnet, subnetToAdd) {
+			childMap := values
+			if subnets, ok := allSubnets[subnetToAdd]; ok {
+				subnet_map := subnets.Subnets
+				subnet_map[subnet] = childMap
+				delete(allSubnets, subnet)
 				return
 			}
 		}

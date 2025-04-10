@@ -6,25 +6,23 @@ import (
 	"os"
 	"testing"
 
+	"github.com/kyle-burnett/simple-ipam/internal/models"
 	"gopkg.in/yaml.v3"
 )
 
 func Test_Delete(t *testing.T) {
 	cmdDelete := DeleteCmd
 	cmdDelete.SetArgs([]string{
-		fmt.Sprintf("-c=%s", "10.10.0.0/24"),
-		fmt.Sprintf("-i=%s", "testSubnet.yaml"),
+		fmt.Sprintf("-s=%s", "10.10.0.0/24"),
+		fmt.Sprintf("-f=%s", "testSubnet.yaml"),
 	})
 	testFile := createTestFile("testSubnet.yaml")
-	expectedYAML := IPAM{
-		IPAM: map[string]interface{}{
-			"description": "test",
-			"prefixes": map[string]interface{}{
-				"10.10.0.0/20": map[string]interface{}{
-					"cidr_tags":   []string{"tag_1", "tag_2"},
-					"description": "test cidr",
-					"subnets":     map[string]interface{}{},
-				},
+	expectedYAML := models.IPAM{
+		Subnets: map[string]models.Subnets{
+			"10.10.0.0/20": {
+				Description: "test subnet",
+				Tags:        []string{"tag_1", "tag_2"},
+				Subnets:     map[string]models.Subnets{},
 			},
 		},
 	}
@@ -61,17 +59,15 @@ func Test_Delete(t *testing.T) {
 func Test_DeleteForce(t *testing.T) {
 	cmdDeleteSubnetFail := DeleteCmd
 	cmdDeleteSubnetFail.SetArgs([]string{
-		fmt.Sprintf("-c=%s", "10.10.0.0/20"),
-		fmt.Sprintf("-i=%s", "testSubnet.yaml"),
-		"-f",
+		fmt.Sprintf("-s=%s", "10.10.0.0/20"),
+		fmt.Sprintf("-f=%s", "testSubnet.yaml"),
+		"-r",
 	})
 	testFile := createTestFile("testSubnet.yaml")
-	expectedYAML := IPAM{
-		IPAM: map[string]interface{}{
-			"description": "test",
-			"prefixes":    map[string]interface{}{},
-		},
+	expectedYAML := models.IPAM{
+		Subnets: map[string]models.Subnets{},
 	}
+
 	expectedYamlData, err := yaml.Marshal(&expectedYAML)
 
 	if err != nil {
@@ -104,19 +100,16 @@ func Test_DeleteForce(t *testing.T) {
 }
 
 func createTestFile(fileName string) string {
-	ipamData := IPAM{
-		IPAM: map[string]interface{}{
-			"description": "test",
-			"prefixes": map[string]interface{}{
-				"10.10.0.0/20": map[string]interface{}{
-					"cidr_tags":   []string{"tag_1", "tag_2"},
-					"description": "test cidr",
-					"subnets": map[string]interface{}{
-						"10.10.0.0/24": map[string]interface{}{
-							"cidr_tags":   []string{"tag_1", "tag_2"},
-							"description": "test cidr",
-							"subnets":     map[string]interface{}{},
-						},
+	ipamData := models.IPAM{
+		Subnets: map[string]models.Subnets{
+			"10.10.0.0/20": {
+				Description: "test subnet",
+				Tags:        []string{"tag_1", "tag_2"},
+				Subnets: map[string]models.Subnets{
+					"10.10.0.0/24": models.Subnets{
+						Description: "test subnet",
+						Tags:        []string{"tag_1", "tag_2"},
+						Subnets:     map[string]models.Subnets{},
 					},
 				},
 			},

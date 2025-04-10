@@ -24,3 +24,4 @@ simple-ipam
 *.yaml
 *.yml
 !.github/*.yaml
+launch.json
