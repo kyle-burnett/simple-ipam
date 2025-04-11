@@ -116,7 +116,7 @@ func createTestFile(fileName string) string {
 				Description: "test subnet",
 				Tags:        []string{"tag_1", "tag_2"},
 				Subnets: map[string]models.Subnets{
-					"10.10.0.0/24": models.Subnets{
+					"10.10.0.0/24": {
 						Description: "test subnet",
 						Tags:        []string{"tag_1", "tag_2"},
 						Subnets:     map[string]models.Subnets{},
