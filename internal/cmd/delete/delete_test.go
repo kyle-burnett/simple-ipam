@@ -14,10 +14,10 @@ func Test_Delete(t *testing.T) {
 	cmdDelete := DeleteCmd
 	cmdDelete.SetArgs([]string{
 		fmt.Sprintf("-s=%s", "10.10.0.0/24"),
-		fmt.Sprintf("-f=%s", "testSubnet.yaml"),
+		fmt.Sprintf("-f=%s", "testDelete.yaml"),
 	})
 
-	testFile := createTestFile("testSubnet.yaml")
+	testFile := createTestFile("testDelete.yaml")
 	expectedYAML := models.IPAM{
 		Subnets: map[string]models.Subnets{
 			"10.10.0.0/20": {
@@ -66,11 +66,11 @@ func Test_DeleteForce(t *testing.T) {
 	cmdDeleteSubnetFail := DeleteCmd
 	cmdDeleteSubnetFail.SetArgs([]string{
 		fmt.Sprintf("-s=%s", "10.10.0.0/20"),
-		fmt.Sprintf("-f=%s", "testSubnet.yaml"),
+		fmt.Sprintf("-f=%s", "testDelete.yaml"),
 		"-r",
 	})
 
-	testFile := createTestFile("testSubnet.yaml")
+	testFile := createTestFile("testDelete.yaml")
 	expectedYAML := models.IPAM{
 		Subnets: map[string]models.Subnets{},
 	}

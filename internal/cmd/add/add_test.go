@@ -15,9 +15,9 @@ func Test_AddSubnet(t *testing.T) {
 	cmdSubnet.SetArgs([]string{
 		fmt.Sprintf("-d=%s", "test subnet"),
 		fmt.Sprintf("-s=%s", "10.10.0.0/25"),
-		fmt.Sprintf("-f=%s", "testSubnet.yaml"),
+		fmt.Sprintf("-f=%s", "testAdd.yaml"),
 	})
-	testFile := createTestFile("testSubnet.yaml")
+	testFile := createTestFile("testAdd.yaml")
 	expectedYAML := models.IPAM{
 		Subnets: map[string]models.Subnets{
 			"10.10.0.0/20": {

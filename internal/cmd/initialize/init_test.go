@@ -25,9 +25,8 @@ func Test_InitCommand(t *testing.T) {
 	}
 
 	expectedYAML := `
-ipam:
   description: test
-  prefixes: {}
+  subnets: {}
 `
 
 	var expectedData interface{}

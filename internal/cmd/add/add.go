@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/cobra/doc"
 	"gopkg.in/yaml.v3"
 
 	"github.com/kyle-burnett/simple-ipam/internal/models"
@@ -25,10 +24,6 @@ var AddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add a subnet to an IPAM file",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := doc.GenMarkdownTree(cmd, "./docs")
-		if err != nil {
-			log.Fatal(err)
-		}
 		Add()
 	},
 }
@@ -175,8 +170,8 @@ func rearrangeSubnets(allSubnets map[string]models.Subnets, subnetToAdd string) 
 		if isSupernetOf(subnet, subnetToAdd) {
 			childMap := values
 			if subnets, ok := allSubnets[subnetToAdd]; ok {
-				subnet_map := subnets.Subnets
-				subnet_map[subnet] = childMap
+				subnetMap := subnets.Subnets
+				subnetMap[subnet] = childMap
 				delete(allSubnets, subnet)
 				return
 			}
