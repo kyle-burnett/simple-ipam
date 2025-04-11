@@ -26,12 +26,10 @@ var DeleteCmd = &cobra.Command{
 func init() {
 	DeleteCmd.Flags().StringVarP(&subnet, "subnet", "s", "", "subnet to Add")
 	DeleteCmd.Flags().StringVarP(&inputFile, "file", "f", "", "ipam file")
-	DeleteCmd.MarkFlagRequired("subnet")
-	DeleteCmd.MarkFlagRequired("file")
+	_ = DeleteCmd.MarkFlagRequired("subnet")
+	_ = DeleteCmd.MarkFlagRequired("file")
 	DeleteCmd.Flags().BoolVarP(&print, "print", "p", false, "Print contents of the IPAM file to stdout")
 	DeleteCmd.Flags().BoolVarP(&force, "recursive", "r", false, "Delete a CIDR and all subnets under it")
-	DeleteCmd.MarkFlagRequired("subnet")
-	DeleteCmd.MarkFlagRequired("ipam-file")
 }
 
 func Delete() {

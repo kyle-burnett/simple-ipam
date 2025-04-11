@@ -31,8 +31,8 @@ var AddCmd = &cobra.Command{
 func init() {
 	AddCmd.Flags().StringVarP(&subnet, "subnet", "s", "", "subnet to Add")
 	AddCmd.Flags().StringVarP(&inputFile, "file", "f", "", "ipam file")
-	AddCmd.MarkFlagRequired("subnet")
-	AddCmd.MarkFlagRequired("file")
+	_ = AddCmd.MarkFlagRequired("subnet")
+	_ = AddCmd.MarkFlagRequired("file")
 	AddCmd.Flags().StringVarP(&description, "description", "d", "", "subnet to Add")
 	AddCmd.Flags().StringSliceVarP(&tags, "tags", "t", []string{}, "Tags to add to the subnet")
 	AddCmd.Flags().BoolVarP(&print, "print", "p", false, "Print contents of the IPAM file to stdout")

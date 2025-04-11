@@ -18,6 +18,12 @@ func Test_Delete(t *testing.T) {
 	})
 
 	testFile := createTestFile("testDelete.yaml")
+	defer func() {
+		err := os.Remove(testFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
 	expectedYAML := models.IPAM{
 		Subnets: map[string]models.Subnets{
 			"10.10.0.0/20": {
@@ -45,21 +51,17 @@ func Test_Delete(t *testing.T) {
 
 	var expectedData interface{}
 	if err := yaml.Unmarshal([]byte(expectedYamlData), &expectedData); err != nil {
-		os.Remove(testFile)
 		t.Fatalf("Error unmarshaling expected YAML: %v", err)
 	}
 
 	var actualData interface{}
 	if err := yaml.Unmarshal(ipamFile, &actualData); err != nil {
-		os.Remove(testFile)
 		t.Fatalf("Error unmarshaling actual YAML: %v", err)
 	}
 
 	if fmt.Sprintf("%v", actualData) != fmt.Sprintf("%v", expectedData) {
-		os.Remove(testFile)
 		t.Errorf("YAML content does not match expected content")
 	}
-	os.Remove(testFile)
 }
 
 func Test_DeleteForce(t *testing.T) {
@@ -71,6 +73,12 @@ func Test_DeleteForce(t *testing.T) {
 	})
 
 	testFile := createTestFile("testDelete.yaml")
+	defer func() {
+		err := os.Remove(testFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
 	expectedYAML := models.IPAM{
 		Subnets: map[string]models.Subnets{},
 	}
@@ -92,21 +100,17 @@ func Test_DeleteForce(t *testing.T) {
 
 	var expectedData interface{}
 	if err := yaml.Unmarshal([]byte(expectedYamlData), &expectedData); err != nil {
-		os.Remove(testFile)
 		t.Fatalf("Error unmarshaling expected YAML: %v", err)
 	}
 
 	var actualData interface{}
 	if err := yaml.Unmarshal(ipamFile, &actualData); err != nil {
-		os.Remove(testFile)
 		t.Fatalf("Error unmarshaling actual YAML: %v", err)
 	}
 
 	if fmt.Sprintf("%v", actualData) != fmt.Sprintf("%v", expectedData) {
-		os.Remove(testFile)
 		t.Errorf("YAML content does not match expected content")
 	}
-	os.Remove(testFile)
 }
 
 func createTestFile(fileName string) string {
