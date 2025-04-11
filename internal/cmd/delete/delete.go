@@ -83,11 +83,3 @@ func deleteCIDR(allSubnets map[string]models.Subnets, subnetToDelete string) {
 		}
 	}
 }
-
-// func checkForSubnets(prefixes interface{}) bool {
-// 	if subnets, ok := prefixes.(map[string]interface{}); ok {
-// 		subnet_map := subnets["subnets"].(map[string]interface{})
-// 		return len(subnet_map) != 0
-// 	}
-// 	return true
-// }
