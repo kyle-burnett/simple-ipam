@@ -1,6 +1,7 @@
 package add
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/kyle-burnett/simple-ipam/internal/models"
-	"github.com/kyle-burnett/simple-ipam/internal/utils/checkvalidsubnet"
 )
 
 var subnet, description, inputFile string
@@ -40,31 +40,34 @@ func Add() {
 	cleanup := true
 	ipamData, err := os.ReadFile(inputFile)
 	if err != nil {
-		log.Panicf("Error reading IPAM file %v:", err)
+		log.Printf("Error reading IPAM file %v:", err)
 	}
 
 	err = yaml.Unmarshal(ipamData, &ipam)
 	if err != nil {
-		log.Panicf("Error unmarshaling IPAM: %v", err)
+		log.Printf("Error unmarshaling IPAM: %v", err)
 	}
 
-	checkvalidsubnet.CheckValidSubnet(subnet)
+	err = checkValidSubnet(subnet)
+	if err != nil {
+		log.Printf("Invalid subnet %v:", subnet)
+	}
 	addsubnet(ipam.Subnets, subnet)
 
 	updatedYAML, err := yaml.Marshal(&ipam)
 	if err != nil {
-		log.Panicf("Error marshaling IPAM: %v", err)
+		log.Printf("Error marshaling IPAM: %v", err)
 	}
 
 	tmpFile, err := os.CreateTemp(filepath.Dir(inputFile), "tmp_ipam.*.txt")
 	if err != nil {
-		log.Panicf("Error creating temp file: %v", err)
+		log.Printf("Error creating temp file: %v", err)
 	}
 	defer func() {
 		if cleanup {
 			err := os.Remove(tmpFile.Name())
 			if err != nil {
-				log.Panicf("Error removing temp file: %v", err)
+				log.Printf("Error removing temp file: %v", err)
 			}
 		}
 	}()
@@ -72,16 +75,16 @@ func Add() {
 	_, err = tmpFile.Write(updatedYAML)
 	if err != nil {
 		_ = tmpFile.Close()
-		log.Panicf("Error writing to temp file %v:", err)
+		log.Printf("Error writing to temp file %v:", err)
 	}
 
 	if err := tmpFile.Close(); err != nil {
-		log.Panicf("Error closing temp file %v:", err)
+		log.Printf("Error closing temp file %v:", err)
 	}
 
 	err = os.Rename(tmpFile.Name(), inputFile)
 	if err != nil {
-		log.Panicf("Error writing IPAM data %v:", err)
+		log.Printf("Error writing IPAM data %v:", err)
 	}
 	cleanup = false
 }
@@ -90,7 +93,7 @@ func Add() {
 func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd string) {
 	for subnet, values := range allSubnets {
 		if subnet == subnetToAdd {
-			log.Panicf("%#v already exists in this IPAM file.\n", subnetToAdd)
+			log.Printf("%#v already exists in this IPAM file.\n", subnetToAdd)
 		}
 		if isSubnetOf(subnet, subnetToAdd) {
 			// We reached the end. No need to continue checking.
@@ -118,16 +121,28 @@ func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd string) {
 	rearrangeSubnets(allSubnets, subnetToAdd)
 }
 
+// Check if the subnet from user input is valid
+func checkValidSubnet(subnetToAdd string) error {
+	_, existingNet, err := net.ParseCIDR(subnetToAdd)
+	if err != nil {
+		return fmt.Errorf("error parsing existing CIDR: %v", err)
+	}
+	if subnetToAdd != existingNet.String() {
+		return fmt.Errorf("%v is not valid CIDR notation", subnetToAdd)
+	}
+	return nil
+}
+
 // Check if subnetToAdd is a subnet of subnet
 func isSubnetOf(subnet, subnetToAdd string) bool {
 	_, existingNet, err := net.ParseCIDR(subnet)
 	if err != nil {
-		log.Panicf("Error parsing existing subnet: %v", err)
+		log.Printf("Error parsing existing subnet: %v", err)
 	}
 
 	_, subnetNet, err := net.ParseCIDR(subnetToAdd)
 	if err != nil {
-		log.Panicf("Error parsing subnet to add: %v", err)
+		log.Printf("Error parsing subnet to add: %v", err)
 	}
 
 	existingsubnetMask, _ := strconv.Atoi(strings.Split(subnet, "/")[1])
@@ -145,13 +160,13 @@ func isSupernetOf(existingsubnet, subnetToAdd string) (bool bool) {
 	// Parse the existing subnet
 	_, existingNet, err := net.ParseCIDR(existingsubnet)
 	if err != nil {
-		log.Panicf("Error parsing existing subnet: %v", err)
+		log.Printf("Error parsing existing subnet: %v", err)
 	}
 
 	// Parse the subnet to add
 	_, subnetNet, err := net.ParseCIDR(subnetToAdd)
 	if err != nil {
-		log.Panicf("Error parsing subnet to add: %v", err)
+		log.Printf("Error parsing subnet to add: %v", err)
 	}
 
 	existingsubnetMask, _ := strconv.Atoi(strings.Split(existingsubnet, "/")[1])

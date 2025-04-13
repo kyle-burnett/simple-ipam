@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/kyle-burnett/simple-ipam/internal/models"
-	"github.com/kyle-burnett/simple-ipam/internal/utils/checkvalidsubnet"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -45,7 +44,7 @@ func Delete() {
 		return
 	}
 
-	checkvalidsubnet.CheckValidSubnet(subnet)
+	//checkvalidsubnet.CheckValidSubnet(subnet)
 	deleteCIDR(ipam.Subnets, subnet)
 
 	updatedYAML, err := yaml.Marshal(&ipam)
