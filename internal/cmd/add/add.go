@@ -71,7 +71,7 @@ func Add() {
 
 	_, err = tmpFile.Write(updatedYAML)
 	if err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		log.Panicf("Error writing to temp file %v:", err)
 	}
 

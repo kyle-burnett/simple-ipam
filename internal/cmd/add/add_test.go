@@ -17,7 +17,8 @@ func Test_AddSubnet(t *testing.T) {
 		fmt.Sprintf("-s=%s", "10.10.0.0/25"),
 		fmt.Sprintf("-f=%s", "testAdd.yaml"),
 	})
-	err, testFile := createTestFile("testAdd.yaml")
+
+	testFile, err := createTestFile("testAdd.yaml")
 	if err != nil {
 		t.Errorf("Error creating test file YAML: %v", err)
 	}
@@ -87,7 +88,8 @@ func Test_AddSupernet(t *testing.T) {
 		fmt.Sprintf("-s=%s", "10.10.0.0/22"),
 		fmt.Sprintf("-f=%s", "testSupernet.yaml"),
 	})
-	err, testFile := createTestFile("testSupernet.yaml")
+
+	testFile, err := createTestFile("testSupernet.yaml")
 	if err != nil {
 		t.Errorf("Error creating test file YAML: %v", err)
 	}
@@ -150,7 +152,7 @@ func Test_AddSupernet(t *testing.T) {
 	}
 }
 
-func createTestFile(fileName string) (error, string) {
+func createTestFile(fileName string) (string, error) {
 	ipamData := models.IPAM{
 		Subnets: map[string]models.Subnets{
 			"10.10.0.0/20": {
@@ -170,19 +172,19 @@ func createTestFile(fileName string) (error, string) {
 	yamlData, err := yaml.Marshal(&ipamData)
 	if err != nil {
 		log.Printf("Error while Marshaling. %v", err)
-		return err, ""
+		return "", err
 	}
 
 	if _, err = os.Stat(fileName); err == nil {
 		log.Print("File already exists")
-		return err, ""
+		return "", err
 	}
 
 	err = os.WriteFile(fileName, yamlData, 0644)
 	if err != nil {
 		log.Print("Unable to write data into the file")
-		return err, ""
+		return "", err
 	}
 
-	return nil, fileName
+	return fileName, nil
 }

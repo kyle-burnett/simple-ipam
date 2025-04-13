@@ -70,7 +70,7 @@ func Delete() {
 
 	_, err = tmpFile.Write(updatedYAML)
 	if err != nil {
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		log.Printf("Error writing to temp file %v:", err)
 		return
 	}
