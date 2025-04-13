@@ -2,11 +2,12 @@ package add
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"testing"
 
 	"github.com/kyle-burnett/simple-ipam/internal/models"
+	"github.com/kyle-burnett/simple-ipam/internal/utils/testutils"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
 
@@ -18,7 +19,7 @@ func Test_AddSubnet(t *testing.T) {
 		fmt.Sprintf("-f=%s", "testAdd.yaml"),
 	})
 
-	testFile, err := createTestFile("testAdd.yaml")
+	testFile, err := testutils.CreateTestFile("testAdd.yaml")
 	if err != nil {
 		t.Errorf("Error creating test file YAML: %v", err)
 	}
@@ -89,7 +90,7 @@ func Test_AddSupernet(t *testing.T) {
 		fmt.Sprintf("-f=%s", "testSupernet.yaml"),
 	})
 
-	testFile, err := createTestFile("testSupernet.yaml")
+	testFile, err := testutils.CreateTestFile("testSupernet.yaml")
 	if err != nil {
 		t.Errorf("Error creating test file YAML: %v", err)
 	}
@@ -152,39 +153,74 @@ func Test_AddSupernet(t *testing.T) {
 	}
 }
 
-func createTestFile(fileName string) (string, error) {
-	ipamData := models.IPAM{
-		Subnets: map[string]models.Subnets{
-			"10.10.0.0/20": {
-				Description: "test subnet",
-				Tags:        []string{"tag_1", "tag_2"},
-				Subnets: map[string]models.Subnets{
-					"10.10.0.0/24": {
-						Description: "test subnet",
-						Tags:        []string{"tag_1", "tag_2"},
-						Subnets:     map[string]models.Subnets{},
-					},
-				},
-			},
-		},
-	}
+func Test_InvalidSubnet(t *testing.T) {
+	cmdInvalidSubnet := AddCmd
+	cmdInvalidSubnet.SetArgs([]string{
+		fmt.Sprintf("-d=%s", "test subnet"),
+		fmt.Sprintf("-s=%s", "10.10.0.0/222"),
+		fmt.Sprintf("-f=%s", "testInvalidSubnet.yaml"),
+	})
 
-	yamlData, err := yaml.Marshal(&ipamData)
+	testFile, err := testutils.CreateTestFile("testInvalidSubnet.yaml")
 	if err != nil {
-		log.Printf("Error while Marshaling. %v", err)
-		return "", err
+		t.Errorf("error creating test file YAML: %v", err)
 	}
 
-	if _, err = os.Stat(fileName); err == nil {
-		log.Print("File already exists")
-		return "", err
-	}
+	defer func() {
+		err := os.Remove(testFile)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
-	err = os.WriteFile(fileName, yamlData, 0644)
+	err = cmdInvalidSubnet.Execute()
+	assert.Equal(t, "invalid subnet: error parsing existing CIDR: invalid CIDR address: 10.10.0.0/222", err.Error())
+}
+
+func Test_InvalidNotation(t *testing.T) {
+	cmdInvalidSubnet := AddCmd
+	cmdInvalidSubnet.SetArgs([]string{
+		fmt.Sprintf("-d=%s", "test subnet"),
+		fmt.Sprintf("-s=%s", "10.10.0.100/22"),
+		fmt.Sprintf("-f=%s", "testInvaliNotation.yaml"),
+	})
+
+	testFile, err := testutils.CreateTestFile("testInvaliNotation.yaml")
 	if err != nil {
-		log.Print("Unable to write data into the file")
-		return "", err
+		t.Errorf("error creating test file YAML: %v", err)
 	}
 
-	return fileName, nil
+	defer func() {
+		err := os.Remove(testFile)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+
+	err = cmdInvalidSubnet.Execute()
+	assert.Equal(t, "invalid subnet: 10.10.0.100/22 is not valid CIDR notation", err.Error())
+}
+
+func Test_DuplicateSubnet(t *testing.T) {
+	cmdInvalidSubnet := AddCmd
+	cmdInvalidSubnet.SetArgs([]string{
+		fmt.Sprintf("-d=%s", "test subnet"),
+		fmt.Sprintf("-s=%s", "10.10.0.0/20"),
+		fmt.Sprintf("-f=%s", "testDuplicateSubnet.yaml"),
+	})
+
+	testFile, err := testutils.CreateTestFile("testDuplicateSubnet.yaml")
+	if err != nil {
+		t.Errorf("error creating test file YAML: %v", err)
+	}
+
+	defer func() {
+		err := os.Remove(testFile)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+
+	err = cmdInvalidSubnet.Execute()
+	assert.Equal(t, "error adding subnet: \"10.10.0.0/20\" already exists in this IPAM file", err.Error())
 }

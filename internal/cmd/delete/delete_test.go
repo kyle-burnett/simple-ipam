@@ -2,11 +2,12 @@ package delete
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"testing"
 
 	"github.com/kyle-burnett/simple-ipam/internal/models"
+	"github.com/kyle-burnett/simple-ipam/internal/utils/testutils"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
 
@@ -17,7 +18,7 @@ func Test_Delete(t *testing.T) {
 		fmt.Sprintf("-f=%s", "testDelete.yaml"),
 	})
 
-	testFile, err := createTestFile("testDelete.yaml")
+	testFile, err := testutils.CreateTestFile("testDelete.yaml")
 	if err != nil {
 		t.Errorf("Error creating test file YAML: %v", err)
 	}
@@ -67,15 +68,15 @@ func Test_Delete(t *testing.T) {
 	}
 }
 
-func Test_DeleteForce(t *testing.T) {
-	cmdDeleteSubnetFail := DeleteCmd
-	cmdDeleteSubnetFail.SetArgs([]string{
+func Test_DeleteRecursive(t *testing.T) {
+	cmdDeleteRecursive := DeleteCmd
+	cmdDeleteRecursive.SetArgs([]string{
 		fmt.Sprintf("-s=%s", "10.10.0.0/20"),
-		fmt.Sprintf("-f=%s", "testDelete.yaml"),
+		fmt.Sprintf("-f=%s", "testDeleteRecursive.yaml"),
 		"-r",
 	})
 
-	testFile, err := createTestFile("testDelete.yaml")
+	testFile, err := testutils.CreateTestFile("testDeleteRecursive.yaml")
 	if err != nil {
 		t.Errorf("Error creating test file YAML: %v", err)
 	}
@@ -95,7 +96,7 @@ func Test_DeleteForce(t *testing.T) {
 		fmt.Printf("Error while Marshaling. %v", err)
 	}
 
-	err = cmdDeleteSubnetFail.Execute()
+	err = cmdDeleteRecursive.Execute()
 	if err != nil {
 		t.Error(err)
 	}
@@ -120,39 +121,26 @@ func Test_DeleteForce(t *testing.T) {
 	}
 }
 
-func createTestFile(fileName string) (string, error) {
-	ipamData := models.IPAM{
-		Subnets: map[string]models.Subnets{
-			"10.10.0.0/20": {
-				Description: "test subnet",
-				Tags:        []string{"tag_1", "tag_2"},
-				Subnets: map[string]models.Subnets{
-					"10.10.0.0/24": {
-						Description: "test subnet",
-						Tags:        []string{"tag_1", "tag_2"},
-						Subnets:     map[string]models.Subnets{},
-					},
-				},
-			},
-		},
-	}
+func Test_DeleteNoRecursive(t *testing.T) {
+	cmdDeleteNoRecursive := DeleteCmd
+	cmdDeleteNoRecursive.SetArgs([]string{
+		fmt.Sprintf("-s=%s", "10.10.0.0/20"),
+		fmt.Sprintf("-f=%s", "testDeleteNoRecursive.yaml"),
+		"-r=false",
+	})
 
-	yamlData, err := yaml.Marshal(&ipamData)
+	testFile, err := testutils.CreateTestFile("testDeleteNoRecursive.yaml")
 	if err != nil {
-		log.Printf("Error while Marshaling. %v", err)
-		return "", err
+		t.Errorf("Error creating test file YAML: %v", err)
 	}
 
-	if _, err = os.Stat(fileName); err == nil {
-		log.Print("File already exists")
-		return "", err
-	}
+	defer func() {
+		err := os.Remove(testFile)
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
-	err = os.WriteFile(fileName, yamlData, 0644)
-	if err != nil {
-		log.Print("Unable to write data into the file")
-		return "", err
-	}
-
-	return fileName, nil
+	err = cmdDeleteNoRecursive.Execute()
+	assert.Equal(t, "cannot delete 10.10.0.0/20 as subnets are defined under it. Use '-r' or '--recursive' to delete 10.10.0.0/20 and everything defined under it", err.Error())
 }

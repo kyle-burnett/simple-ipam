@@ -20,10 +20,12 @@ var tags []string
 var ipam models.IPAM
 
 var AddCmd = &cobra.Command{
-	Use:   "add",
-	Short: "Add a subnet to an IPAM file",
-	Run: func(cmd *cobra.Command, args []string) {
-		Add()
+	Use:          "add",
+	Short:        "Add a subnet to an IPAM file",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		err := Add()
+		return err
 	},
 }
 
@@ -36,43 +38,42 @@ func init() {
 	AddCmd.Flags().StringSliceVarP(&tags, "tags", "t", []string{}, "Tags to add to the subnet")
 }
 
-func Add() {
+func Add() error {
 	cleanup := true
 	ipamData, err := os.ReadFile(inputFile)
 	if err != nil {
-		log.Printf("Error reading IPAM file: %v", err)
-		return
+		return fmt.Errorf("error reading IPAM file: %v", err)
 	}
 
 	err = yaml.Unmarshal(ipamData, &ipam)
 	if err != nil {
-		log.Printf("Error unmarshaling IPAM: %v", err)
-		return
+		return fmt.Errorf("error unmarshaling IPAM: %v", err)
 	}
 
 	err = checkValidSubnet(subnet)
 	if err != nil {
-		log.Printf("Invalid subnet %v:", subnet)
-		return
+		return fmt.Errorf("invalid subnet: %v", err)
 	}
-	addsubnet(ipam.Subnets, subnet)
+	err = addsubnet(ipam.Subnets, subnet)
+	if err != nil {
+		return fmt.Errorf("error adding subnet: %v", err)
+	}
 
 	updatedYAML, err := yaml.Marshal(&ipam)
 	if err != nil {
-		log.Printf("Error marshaling IPAM: %v", err)
-		return
+		return fmt.Errorf("error marshaling IPAM: %v", err)
 	}
 
 	tmpFile, err := os.CreateTemp(filepath.Dir(inputFile), "tmp_ipam.*.txt")
 	if err != nil {
-		log.Printf("Error creating temp file: %v", err)
-		return
+		return fmt.Errorf("error creating temp file: %v", err)
 	}
+
 	defer func() {
 		if cleanup {
 			err := os.Remove(tmpFile.Name())
 			if err != nil {
-				log.Printf("Error removing temp file: %v", err)
+				log.Printf("error removing temp file: %v", err)
 			}
 		}
 	}()
@@ -80,30 +81,32 @@ func Add() {
 	_, err = tmpFile.Write(updatedYAML)
 	if err != nil {
 		_ = tmpFile.Close()
-		log.Printf("Error writing to temp file %v:", err)
-		return
+		return fmt.Errorf("error writing to temp file: %v", err)
 	}
 
 	if err := tmpFile.Close(); err != nil {
-		log.Printf("Error closing temp file %v:", err)
-		return
+		return fmt.Errorf("error closing temp file: %v", err)
 	}
 
 	err = os.Rename(tmpFile.Name(), inputFile)
 	if err != nil {
-		log.Printf("Error writing IPAM data %v:", err)
-		return
+		return fmt.Errorf("error writing IPAM data: %v", err)
 	}
 	cleanup = false
+	return nil
 }
 
 // Add a subnet to an IPAM file.
-func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd string) {
+func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd string) error {
 	for subnet, values := range allSubnets {
 		if subnet == subnetToAdd {
-			log.Printf("%#v already exists in this IPAM file.\n", subnetToAdd)
+			return fmt.Errorf("%#v already exists in this IPAM file", subnetToAdd)
 		}
-		if isSubnetOf(subnet, subnetToAdd) {
+		isSubnet, err := isSubnetOf(subnet, subnetToAdd)
+		if err != nil {
+			return err
+		}
+		if isSubnet {
 			// We reached the end. No need to continue checking.
 			if len(values.Subnets) == 0 {
 				if _, ok := values.Subnets[subnetToAdd]; !ok {
@@ -113,11 +116,14 @@ func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd string) {
 						Subnets:     map[string]models.Subnets{},
 					}
 				}
-				return
+				return nil
 			} else {
-				addsubnet(values.Subnets, subnetToAdd)
+				err := addsubnet(values.Subnets, subnetToAdd)
+				if err != nil {
+					return err
+				}
 			}
-			return
+			return nil
 		}
 	}
 	allSubnets[subnetToAdd] = models.Subnets{
@@ -126,7 +132,11 @@ func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd string) {
 		Subnets:     map[string]models.Subnets{},
 	}
 	// Re-arrange the IPAM file to keep the newly added subnet in order
-	rearrangeSubnets(allSubnets, subnetToAdd)
+	err := rearrangeSubnets(allSubnets, subnetToAdd)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Check if the subnet from user input is valid
@@ -141,50 +151,50 @@ func checkValidSubnet(subnetToAdd string) error {
 	return nil
 }
 
-// Check if subnetToAdd is a subnet of subnet
-func isSubnetOf(subnet, subnetToAdd string) bool {
+// Check if subnetToAdd is a subnet of an existing network
+func isSubnetOf(subnet, subnetToAdd string) (bool, error) {
 	_, existingNet, err := net.ParseCIDR(subnet)
 	if err != nil {
-		log.Printf("Error parsing existing subnet: %v", err)
+		return false, fmt.Errorf("error parsing existing subnet: %v", err)
 	}
 
 	_, subnetNet, err := net.ParseCIDR(subnetToAdd)
 	if err != nil {
-		log.Printf("Error parsing subnet to add: %v", err)
+		return false, fmt.Errorf("error parsing subnet to add: %v", err)
 	}
 
 	existingsubnetMask, _ := strconv.Atoi(strings.Split(subnet, "/")[1])
 	subnetToAddMask, _ := strconv.Atoi(strings.Split(subnetToAdd, "/")[1])
 
 	if existingNet.Contains(subnetNet.IP) {
-		return subnetToAddMask >= existingsubnetMask
+		return subnetToAddMask >= existingsubnetMask, nil
 	}
 
-	return false
+	return false, nil
 }
 
 // Check if subnetToAdd is a supernet of existingsubnet
-func isSupernetOf(existingsubnet, subnetToAdd string) (bool bool) {
+func isSupernetOf(existingsubnet, subnetToAdd string) (bool, error) {
 	// Parse the existing subnet
 	_, existingNet, err := net.ParseCIDR(existingsubnet)
 	if err != nil {
-		log.Printf("Error parsing existing subnet: %v", err)
+		return false, fmt.Errorf("error parsing existing subnet: %v", err)
 	}
 
 	// Parse the subnet to add
 	_, subnetNet, err := net.ParseCIDR(subnetToAdd)
 	if err != nil {
-		log.Printf("Error parsing subnet to add: %v", err)
+		return false, fmt.Errorf("error parsing subnet to add: %v", err)
 	}
 
 	existingsubnetMask, _ := strconv.Atoi(strings.Split(existingsubnet, "/")[1])
 	subnetToAddMask, _ := strconv.Atoi(strings.Split(subnetToAdd, "/")[1])
 
 	if subnetNet.Contains(existingNet.IP) {
-		return subnetToAddMask <= existingsubnetMask
+		return subnetToAddMask <= existingsubnetMask, nil
 	}
 
-	return false
+	return false, nil
 }
 
 // Re-arrange the IPAM hierarchy after adding a new subnet.
@@ -202,20 +212,25 @@ func isSupernetOf(existingsubnet, subnetToAdd string) (bool bool) {
 //			10.10.0.0/21:
 //				10.10.0.0/22:
 //					10.10.0.0/24:
-func rearrangeSubnets(allSubnets map[string]models.Subnets, subnetToAdd string) {
+func rearrangeSubnets(allSubnets map[string]models.Subnets, subnetToAdd string) error {
 	for subnet, values := range allSubnets {
 		// Don't add subnetToAdd under itself
 		if subnet == subnetToAdd {
 			continue
 		}
-		if isSupernetOf(subnet, subnetToAdd) {
+		isSupernet, err := isSupernetOf(subnet, subnetToAdd)
+		if err != nil {
+			return err
+		}
+		if isSupernet {
 			childMap := values
 			if subnets, ok := allSubnets[subnetToAdd]; ok {
 				subnetMap := subnets.Subnets
 				subnetMap[subnet] = childMap
 				delete(allSubnets, subnet)
-				return
+				return nil
 			}
 		}
 	}
+	return nil
 }
