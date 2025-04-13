@@ -1,6 +1,6 @@
 module github.com/kyle-burnett/simple-ipam
 
-go 1.20
+go 1.24.2
 
 require (
 	github.com/spf13/cobra v1.9.1

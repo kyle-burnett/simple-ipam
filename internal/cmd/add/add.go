@@ -40,28 +40,33 @@ func Add() {
 	cleanup := true
 	ipamData, err := os.ReadFile(inputFile)
 	if err != nil {
-		log.Printf("Error reading IPAM file %v:", err)
+		log.Printf("Error reading IPAM file: %v", err)
+		return
 	}
 
 	err = yaml.Unmarshal(ipamData, &ipam)
 	if err != nil {
 		log.Printf("Error unmarshaling IPAM: %v", err)
+		return
 	}
 
 	err = checkValidSubnet(subnet)
 	if err != nil {
 		log.Printf("Invalid subnet %v:", subnet)
+		return
 	}
 	addsubnet(ipam.Subnets, subnet)
 
 	updatedYAML, err := yaml.Marshal(&ipam)
 	if err != nil {
 		log.Printf("Error marshaling IPAM: %v", err)
+		return
 	}
 
 	tmpFile, err := os.CreateTemp(filepath.Dir(inputFile), "tmp_ipam.*.txt")
 	if err != nil {
 		log.Printf("Error creating temp file: %v", err)
+		return
 	}
 	defer func() {
 		if cleanup {
@@ -76,15 +81,18 @@ func Add() {
 	if err != nil {
 		_ = tmpFile.Close()
 		log.Printf("Error writing to temp file %v:", err)
+		return
 	}
 
 	if err := tmpFile.Close(); err != nil {
 		log.Printf("Error closing temp file %v:", err)
+		return
 	}
 
 	err = os.Rename(tmpFile.Name(), inputFile)
 	if err != nil {
 		log.Printf("Error writing IPAM data %v:", err)
+		return
 	}
 	cleanup = false
 }

@@ -34,18 +34,19 @@ func Initialize() {
 
 	yamlData, err := yaml.Marshal(&ipam)
 	if err != nil {
-		log.Fatalf("Error while marshaling YAML: %v", err)
+		log.Printf("Error while marshaling YAML: %v", err)
+		return
 	}
 
 	fileName := file + ".yaml"
 	if _, err = os.Stat(fileName); errors.Is(err, fs.ErrNotExist) {
 		err = os.WriteFile(fileName, yamlData, 0644)
 		if err != nil {
-			log.Fatalf("Unable to create IPAM file: %v", err)
+			log.Printf("Unable to create IPAM file: %v", err)
 		}
 	} else if err == nil {
-		log.Fatalf("IPAM file %v already exists", fileName)
+		log.Printf("IPAM file %v already exists", fileName)
 	} else {
-		log.Fatal(err)
+		log.Print(err)
 	}
 }
