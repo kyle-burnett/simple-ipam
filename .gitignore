@@ -24,5 +24,6 @@ simple-ipam
 *.yaml
 *.yml
 !.github/*.yaml
+!**/testdata/*.yaml
 launch.json
 !.github/workflows/*.yml

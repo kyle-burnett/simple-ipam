@@ -1,0 +1,18 @@
+description: ""
+subnets:
+    10.10.0.0/20:
+        description: test subnet
+        tags:
+            - tag_1
+            - tag_2
+        subnets:
+            10.10.0.0/24:
+                description: test subnet
+                tags:
+                    - tag_1
+                    - tag_2
+                subnets:
+                    10.10.0.0/25:
+                        description: test subnet
+                        tags: []
+                        subnets: {}
