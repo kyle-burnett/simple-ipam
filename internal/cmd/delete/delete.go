@@ -23,7 +23,7 @@ var DeleteCmd = &cobra.Command{
 }
 
 func init() {
-	DeleteCmd.Flags().StringVarP(&subnet, "subnet", "s", "", "subnet to Add")
+	DeleteCmd.Flags().StringVarP(&subnet, "subnet", "s", "", "subnet to Delete")
 	DeleteCmd.Flags().StringVarP(&inputFile, "file", "f", "", "ipam file")
 	_ = DeleteCmd.MarkFlagRequired("subnet")
 	_ = DeleteCmd.MarkFlagRequired("file")
@@ -54,22 +54,13 @@ func deleteCIDR(allSubnets map[string]models.Subnets, subnetToDelete string, rec
 	if _, ok := allSubnets[subnetToDelete]; ok {
 		if len(allSubnets[subnetToDelete].Subnets) > 0 && !recursive {
 			return fmt.Errorf("cannot delete %[1]s as subnets are defined under it. Use '-r' or '--recursive' to delete %[1]s and everything defined under it", subnetToDelete)
-		} else {
-			delete(allSubnets, subnetToDelete)
 		}
+		delete(allSubnets, subnetToDelete)
+		return nil
 	}
 	for _, v := range allSubnets {
-		if _, ok := v.Subnets[subnetToDelete]; ok {
-			if len((v.Subnets)[subnetToDelete].Subnets) > 0 && !recursive {
-				return fmt.Errorf("cannot delete %[1]s as subnets are defined under it. Use '-r' or '--recursive' to delete %[1]s and everything defined under it", subnetToDelete)
-			} else {
-				delete(v.Subnets, subnetToDelete)
-			}
-		} else {
-			err := deleteCIDR(v.Subnets, subnetToDelete, recursive)
-			if err != nil {
-				return err
-			}
+		if err := deleteCIDR(v.Subnets, subnetToDelete, recursive); err != nil {
+			return err
 		}
 	}
 	return nil
