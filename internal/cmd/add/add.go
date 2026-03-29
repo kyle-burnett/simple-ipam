@@ -29,7 +29,7 @@ func init() {
 	AddCmd.Flags().StringVarP(&inputFile, "file", "f", "", "ipam file")
 	_ = AddCmd.MarkFlagRequired("subnet")
 	_ = AddCmd.MarkFlagRequired("file")
-	AddCmd.Flags().StringVarP(&description, "description", "d", "", "subnet to Add")
+	AddCmd.Flags().StringVarP(&description, "description", "d", "", "description for the subnet")
 	AddCmd.Flags().StringSliceVarP(&tags, "tags", "t", []string{}, "Tags to add to the subnet")
 }
 
