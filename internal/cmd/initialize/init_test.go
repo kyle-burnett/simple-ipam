@@ -3,10 +3,6 @@ package initialize
 import (
 	"os"
 	"testing"
-
-	"gopkg.in/yaml.v3"
-
-	"github.com/kyle-burnett/simple-ipam/internal/models"
 )
 
 func Test_InitCommand(t *testing.T) {
@@ -15,22 +11,18 @@ func Test_InitCommand(t *testing.T) {
 	}
 	defer os.Remove("test.yaml")
 
-	ipamFile, err := os.ReadFile("test.yaml")
+	want, err := os.ReadFile("testdata/init_expected.yaml")
+	if err != nil {
+		t.Fatalf("unexpected error reading fixture: %v", err)
+	}
+
+	got, err := os.ReadFile("test.yaml")
 	if err != nil {
 		t.Fatalf("unexpected error reading file: %v", err)
 	}
 
-	expectedYAML := models.IPAM{
-		Description: "test",
-		Subnets:     map[string]models.Subnets{},
-	}
-	want, err := yaml.Marshal(&expectedYAML)
-	if err != nil {
-		t.Fatalf("unexpected error marshaling expected YAML: %v", err)
-	}
-
-	if string(ipamFile) != string(want) {
-		t.Errorf("got:\n%s\nwant:\n%s", ipamFile, want)
+	if string(got) != string(want) {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
 	}
 }
 

@@ -4,9 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
-	"github.com/kyle-burnett/simple-ipam/internal/models"
 	"github.com/kyle-burnett/simple-ipam/internal/utils/testutils"
 )
 
@@ -21,31 +18,9 @@ func Test_AddSubnet(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expectedYAML := models.IPAM{
-		Subnets: map[string]models.Subnets{
-			"10.10.0.0/20": {
-				Description: "test subnet",
-				Tags:        []string{"tag_1", "tag_2"},
-				Subnets: map[string]models.Subnets{
-					"10.10.0.0/24": {
-						Description: "test subnet",
-						Tags:        []string{"tag_1", "tag_2"},
-						Subnets: map[string]models.Subnets{
-							"10.10.0.0/25": {
-								Description: "test subnet",
-								Tags:        []string{},
-								Subnets:     map[string]models.Subnets{},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	want, err := yaml.Marshal(&expectedYAML)
+	want, err := os.ReadFile("testdata/add_subnet_expected.yaml")
 	if err != nil {
-		t.Fatalf("unexpected error marshaling expected YAML: %v", err)
+		t.Fatalf("unexpected error reading fixture: %v", err)
 	}
 
 	got, err := os.ReadFile(testFile)
@@ -69,31 +44,9 @@ func Test_AddSupernet(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expectedYAML := models.IPAM{
-		Subnets: map[string]models.Subnets{
-			"10.10.0.0/20": {
-				Description: "test subnet",
-				Tags:        []string{"tag_1", "tag_2"},
-				Subnets: map[string]models.Subnets{
-					"10.10.0.0/22": {
-						Description: "test subnet",
-						Tags:        []string{},
-						Subnets: map[string]models.Subnets{
-							"10.10.0.0/24": {
-								Description: "test subnet",
-								Tags:        []string{"tag_1", "tag_2"},
-								Subnets:     map[string]models.Subnets{},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	want, err := yaml.Marshal(&expectedYAML)
+	want, err := os.ReadFile("testdata/add_supernet_expected.yaml")
 	if err != nil {
-		t.Fatalf("unexpected error marshaling expected YAML: %v", err)
+		t.Fatalf("unexpected error reading fixture: %v", err)
 	}
 
 	got, err := os.ReadFile(testFile)
