@@ -9,7 +9,7 @@ func Test_InitCommand(t *testing.T) {
 	if err := Initialize("test", "test"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer os.Remove("test.yaml")
+	t.Cleanup(func() { _ = os.Remove("test.yaml") })
 
 	want, err := os.ReadFile("testdata/init_expected.yaml")
 	if err != nil {
@@ -30,7 +30,7 @@ func Test_InitCommand_FileAlreadyExists(t *testing.T) {
 	if err := Initialize("test", "test"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer os.Remove("test.yaml")
+	t.Cleanup(func() { _ = os.Remove("test.yaml") })
 
 	wantErr := "IPAM file test.yaml already exists"
 	err := Initialize("test", "test")

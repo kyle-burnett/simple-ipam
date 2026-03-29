@@ -12,7 +12,7 @@ func Test_Delete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating test file: %v", err)
 	}
-	defer os.Remove(testFile)
+	t.Cleanup(func() { _ = os.Remove(testFile) })
 
 	if err = Delete(testFile, "10.10.0.0/24", false); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -38,7 +38,7 @@ func Test_DeleteRecursive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating test file: %v", err)
 	}
-	defer os.Remove(testFile)
+	t.Cleanup(func() { _ = os.Remove(testFile) })
 
 	if err = Delete(testFile, "10.10.0.0/20", true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -64,7 +64,7 @@ func Test_DeleteNoRecursive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating test file: %v", err)
 	}
-	defer os.Remove(testFile)
+	t.Cleanup(func() { _ = os.Remove(testFile) })
 
 	wantErr := "cannot delete 10.10.0.0/20 as subnets are defined under it. Use '-r' or '--recursive' to delete 10.10.0.0/20 and everything defined under it"
 	err = Delete(testFile, "10.10.0.0/20", false)

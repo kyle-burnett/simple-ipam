@@ -12,7 +12,7 @@ func Test_AddSubnet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating test file: %v", err)
 	}
-	defer os.Remove(testFile)
+	t.Cleanup(func() { _ = os.Remove(testFile) })
 
 	if err = Add(testFile, "10.10.0.0/25", "test subnet", []string{}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -38,7 +38,7 @@ func Test_AddSupernet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating test file: %v", err)
 	}
-	defer os.Remove(testFile)
+	t.Cleanup(func() { _ = os.Remove(testFile) })
 
 	if err = Add(testFile, "10.10.0.0/22", "test subnet", []string{}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -64,7 +64,7 @@ func Test_AddErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating test file: %v", err)
 	}
-	defer os.Remove(testFile)
+	t.Cleanup(func() { _ = os.Remove(testFile) })
 
 	tests := []struct {
 		name    string
