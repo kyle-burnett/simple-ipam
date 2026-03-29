@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/kyle-burnett/simple-ipam/internal/models"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 func CreateTestFile(fileName string) (string, error) {

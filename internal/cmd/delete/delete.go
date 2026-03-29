@@ -7,7 +7,7 @@ import (
 	"github.com/kyle-burnett/simple-ipam/internal/models"
 	"github.com/kyle-burnett/simple-ipam/internal/utils/fileutil"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 var subnet, inputFile string
