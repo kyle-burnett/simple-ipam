@@ -16,15 +16,13 @@ import (
 
 var subnet, description, inputFile string
 var tags []string
-var ipam models.IPAM
 
 var AddCmd = &cobra.Command{
 	Use:          "add",
 	Short:        "Add a subnet to an IPAM file",
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := Add()
-		return err
+		return Add(inputFile, subnet, description, tags)
 	},
 }
 
@@ -37,12 +35,13 @@ func init() {
 	AddCmd.Flags().StringSliceVarP(&tags, "tags", "t", []string{}, "Tags to add to the subnet")
 }
 
-func Add() error {
+func Add(inputFile, subnet, description string, tags []string) error {
 	ipamData, err := os.ReadFile(inputFile)
 	if err != nil {
 		return fmt.Errorf("error reading IPAM file: %v", err)
 	}
 
+	var ipam models.IPAM
 	err = yaml.Unmarshal(ipamData, &ipam)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling IPAM: %v", err)
@@ -52,7 +51,7 @@ func Add() error {
 	if err != nil {
 		return fmt.Errorf("invalid subnet: %v", err)
 	}
-	err = addsubnet(ipam.Subnets, subnet)
+	err = addsubnet(ipam.Subnets, subnet, description, tags)
 	if err != nil {
 		return fmt.Errorf("error adding subnet: %v", err)
 	}
@@ -61,7 +60,7 @@ func Add() error {
 }
 
 // Add a subnet to an IPAM file.
-func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd string) error {
+func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd, description string, tags []string) error {
 	for subnet, values := range allSubnets {
 		if subnet == subnetToAdd {
 			return fmt.Errorf("%#v already exists in this IPAM file", subnetToAdd)
@@ -82,7 +81,7 @@ func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd string) error {
 				}
 				return nil
 			} else {
-				err := addsubnet(values.Subnets, subnetToAdd)
+				err := addsubnet(values.Subnets, subnetToAdd, description, tags)
 				if err != nil {
 					return err
 				}

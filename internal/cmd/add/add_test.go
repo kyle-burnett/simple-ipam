@@ -8,28 +8,18 @@ import (
 	"github.com/kyle-burnett/simple-ipam/internal/models"
 	"github.com/kyle-burnett/simple-ipam/internal/utils/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
 func Test_AddSubnet(t *testing.T) {
-	cmdSubnet := AddCmd
-	cmdSubnet.SetArgs([]string{
-		fmt.Sprintf("-d=%s", "test subnet"),
-		fmt.Sprintf("-s=%s", "10.10.0.0/25"),
-		fmt.Sprintf("-f=%s", "testAdd.yaml"),
-	})
-
 	testFile, err := testutils.CreateTestFile("testAdd.yaml")
-	if err != nil {
-		t.Errorf("Error creating test file YAML: %v", err)
-	}
+	require.NoError(t, err)
+	defer os.Remove(testFile)
 
-	defer func() {
-		err := os.Remove(testFile)
-		if err != nil {
-			t.Error(err)
-		}
-	}()
+	err = Add(testFile, "10.10.0.0/25", "test subnet", []string{})
+	require.NoError(t, err)
+
 	expectedYAML := models.IPAM{
 		Subnets: map[string]models.Subnets{
 			"10.10.0.0/20": {
@@ -53,54 +43,22 @@ func Test_AddSubnet(t *testing.T) {
 	}
 
 	expectedYamlData, err := yaml.Marshal(&expectedYAML)
-	if err != nil {
-		fmt.Printf("Error while Marshaling. %v", err)
-	}
-
-	err = cmdSubnet.Execute()
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	ipamFile, err := os.ReadFile(testFile)
-	if err != nil {
-		t.Errorf("Error reading YAML file: %v", err)
-	}
+	require.NoError(t, err)
 
-	var expectedData interface{}
-	if err := yaml.Unmarshal([]byte(expectedYamlData), &expectedData); err != nil {
-		t.Errorf("Error unmarshaling expected YAML: %v", err)
-	}
-
-	var actualData interface{}
-	if err := yaml.Unmarshal(ipamFile, &actualData); err != nil {
-		t.Errorf("Error unmarshaling actual YAML: %v", err)
-	}
-
-	if fmt.Sprintf("%v", actualData) != fmt.Sprintf("%v", expectedData) {
-		t.Errorf("YAML content does not match expected content")
-	}
+	assert.Equal(t, string(expectedYamlData), string(ipamFile))
 }
 
 func Test_AddSupernet(t *testing.T) {
-	cmdSupernet := AddCmd
-	cmdSupernet.SetArgs([]string{
-		fmt.Sprintf("-d=%s", "test subnet"),
-		fmt.Sprintf("-s=%s", "10.10.0.0/22"),
-		fmt.Sprintf("-f=%s", "testSupernet.yaml"),
-	})
-
 	testFile, err := testutils.CreateTestFile("testSupernet.yaml")
-	if err != nil {
-		t.Errorf("Error creating test file YAML: %v", err)
-	}
+	require.NoError(t, err)
+	defer os.Remove(testFile)
 
-	defer func() {
-		err := os.Remove(testFile)
-		if err != nil {
-			t.Error(err)
-		}
-	}()
+	err = Add(testFile, "10.10.0.0/22", "test subnet", []string{})
+	require.NoError(t, err)
+
 	expectedYAML := models.IPAM{
 		Subnets: map[string]models.Subnets{
 			"10.10.0.0/20": {
@@ -124,103 +82,37 @@ func Test_AddSupernet(t *testing.T) {
 	}
 
 	expectedYamlData, err := yaml.Marshal(&expectedYAML)
-	if err != nil {
-		fmt.Printf("Error while Marshaling. %v", err)
-	}
-
-	err = cmdSupernet.Execute()
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	ipamFile, err := os.ReadFile(testFile)
-	if err != nil {
-		t.Errorf("Error reading YAML file: %v", err)
-	}
+	require.NoError(t, err)
 
-	var expectedData interface{}
-	if err := yaml.Unmarshal([]byte(expectedYamlData), &expectedData); err != nil {
-		t.Errorf("Error unmarshaling expected YAML: %v", err)
-	}
-
-	var actualData interface{}
-	if err := yaml.Unmarshal(ipamFile, &actualData); err != nil {
-		t.Errorf("Error unmarshaling actual YAML: %v", err)
-	}
-
-	if fmt.Sprintf("%v", actualData) != fmt.Sprintf("%v", expectedData) {
-		t.Errorf("YAML content does not match expected content")
-	}
+	assert.Equal(t, string(expectedYamlData), string(ipamFile))
 }
 
 func Test_InvalidSubnet(t *testing.T) {
-	cmdInvalidSubnet := AddCmd
-	cmdInvalidSubnet.SetArgs([]string{
-		fmt.Sprintf("-d=%s", "test subnet"),
-		fmt.Sprintf("-s=%s", "10.10.0.0/222"),
-		fmt.Sprintf("-f=%s", "testInvalidSubnet.yaml"),
-	})
-
 	testFile, err := testutils.CreateTestFile("testInvalidSubnet.yaml")
-	if err != nil {
-		t.Errorf("error creating test file YAML: %v", err)
-	}
+	require.NoError(t, err)
+	defer os.Remove(testFile)
 
-	defer func() {
-		err := os.Remove(testFile)
-		if err != nil {
-			t.Error(err)
-		}
-	}()
-
-	err = cmdInvalidSubnet.Execute()
-	assert.Equal(t, "invalid subnet: error parsing existing CIDR: invalid CIDR address: 10.10.0.0/222", err.Error())
+	err = Add(testFile, "10.10.0.0/222", "test subnet", []string{})
+	assert.EqualError(t, err, "invalid subnet: error parsing existing CIDR: invalid CIDR address: 10.10.0.0/222")
 }
 
 func Test_InvalidNotation(t *testing.T) {
-	cmdInvalidSubnet := AddCmd
-	cmdInvalidSubnet.SetArgs([]string{
-		fmt.Sprintf("-d=%s", "test subnet"),
-		fmt.Sprintf("-s=%s", "10.10.0.100/22"),
-		fmt.Sprintf("-f=%s", "testInvaliNotation.yaml"),
-	})
+	testFile, err := testutils.CreateTestFile("testInvalidNotation.yaml")
+	require.NoError(t, err)
+	defer os.Remove(testFile)
 
-	testFile, err := testutils.CreateTestFile("testInvaliNotation.yaml")
-	if err != nil {
-		t.Errorf("error creating test file YAML: %v", err)
-	}
-
-	defer func() {
-		err := os.Remove(testFile)
-		if err != nil {
-			t.Error(err)
-		}
-	}()
-
-	err = cmdInvalidSubnet.Execute()
-	assert.Equal(t, "invalid subnet: 10.10.0.100/22 is not valid CIDR notation", err.Error())
+	err = Add(testFile, "10.10.0.100/22", "test subnet", []string{})
+	assert.EqualError(t, err, fmt.Sprintf("invalid subnet: %s is not valid CIDR notation", "10.10.0.100/22"))
 }
 
 func Test_DuplicateSubnet(t *testing.T) {
-	cmdInvalidSubnet := AddCmd
-	cmdInvalidSubnet.SetArgs([]string{
-		fmt.Sprintf("-d=%s", "test subnet"),
-		fmt.Sprintf("-s=%s", "10.10.0.0/20"),
-		fmt.Sprintf("-f=%s", "testDuplicateSubnet.yaml"),
-	})
-
 	testFile, err := testutils.CreateTestFile("testDuplicateSubnet.yaml")
-	if err != nil {
-		t.Errorf("error creating test file YAML: %v", err)
-	}
+	require.NoError(t, err)
+	defer os.Remove(testFile)
 
-	defer func() {
-		err := os.Remove(testFile)
-		if err != nil {
-			t.Error(err)
-		}
-	}()
-
-	err = cmdInvalidSubnet.Execute()
-	assert.Equal(t, "error adding subnet: \"10.10.0.0/20\" already exists in this IPAM file", err.Error())
+	err = Add(testFile, "10.10.0.0/20", "test subnet", []string{})
+	assert.EqualError(t, err, "error adding subnet: \"10.10.0.0/20\" already exists in this IPAM file")
 }

@@ -12,15 +12,13 @@ import (
 
 var subnet, inputFile string
 var recursive bool
-var ipam models.IPAM
 
 var DeleteCmd = &cobra.Command{
 	Use:          "delete",
 	Short:        "Delete a prefix from an IPAM file",
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		err := Delete()
-		return err
+		return Delete(inputFile, subnet, recursive)
 	},
 }
 
@@ -32,18 +30,19 @@ func init() {
 	DeleteCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Delete a CIDR and all subnets under it")
 }
 
-func Delete() error {
+func Delete(inputFile, subnet string, recursive bool) error {
 	ipamFile, err := os.ReadFile(inputFile)
 	if err != nil {
 		return fmt.Errorf("error reading YAML file: %v", err)
 	}
 
+	var ipam models.IPAM
 	err = yaml.Unmarshal(ipamFile, &ipam)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling YAML: %v", err)
 	}
 
-	err = deleteCIDR(ipam.Subnets, subnet)
+	err = deleteCIDR(ipam.Subnets, subnet, recursive)
 	if err != nil {
 		return err
 	}
@@ -51,7 +50,7 @@ func Delete() error {
 	return fileutil.WriteYAMLAtomic(inputFile, &ipam)
 }
 
-func deleteCIDR(allSubnets map[string]models.Subnets, subnetToDelete string) error {
+func deleteCIDR(allSubnets map[string]models.Subnets, subnetToDelete string, recursive bool) error {
 	if _, ok := allSubnets[subnetToDelete]; ok {
 		if len(allSubnets[subnetToDelete].Subnets) > 0 && !recursive {
 			return fmt.Errorf("cannot delete %[1]s as subnets are defined under it. Use '-r' or '--recursive' to delete %[1]s and everything defined under it", subnetToDelete)
@@ -67,7 +66,7 @@ func deleteCIDR(allSubnets map[string]models.Subnets, subnetToDelete string) err
 				delete(v.Subnets, subnetToDelete)
 			}
 		} else {
-			err := deleteCIDR(v.Subnets, subnetToDelete)
+			err := deleteCIDR(v.Subnets, subnetToDelete, recursive)
 			if err != nil {
 				return err
 			}
