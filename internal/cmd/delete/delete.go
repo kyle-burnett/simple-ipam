@@ -2,11 +2,10 @@ package delete
 
 import (
 	"fmt"
-	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/kyle-burnett/simple-ipam/internal/models"
+	"github.com/kyle-burnett/simple-ipam/internal/utils/fileutil"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -34,7 +33,6 @@ func init() {
 }
 
 func Delete() error {
-	cleanup := true
 	ipamFile, err := os.ReadFile(inputFile)
 	if err != nil {
 		return fmt.Errorf("error reading YAML file: %v", err)
@@ -50,40 +48,7 @@ func Delete() error {
 		return err
 	}
 
-	updatedYAML, err := yaml.Marshal(&ipam)
-	if err != nil {
-		return fmt.Errorf("error marshaling YAML: %v", err)
-	}
-
-	tmpFile, err := os.CreateTemp(filepath.Dir(inputFile), "tmp_ipam.*.txt")
-	if err != nil {
-		return fmt.Errorf("error creating temp file: %v", err)
-	}
-	defer func() {
-		if cleanup {
-			err := os.Remove(tmpFile.Name())
-			if err != nil {
-				log.Printf("error removing temp file: %v", err)
-			}
-		}
-	}()
-
-	_, err = tmpFile.Write(updatedYAML)
-	if err != nil {
-		_ = tmpFile.Close()
-		return fmt.Errorf("error writing to temp file: %v", err)
-	}
-
-	if err := tmpFile.Close(); err != nil {
-		return fmt.Errorf("error closing temp file: %v", err)
-	}
-
-	err = os.Rename(tmpFile.Name(), inputFile)
-	if err != nil {
-		return fmt.Errorf("error writing IPAM data: %v", err)
-	}
-	cleanup = false
-	return nil
+	return fileutil.WriteYAMLAtomic(inputFile, &ipam)
 }
 
 func deleteCIDR(allSubnets map[string]models.Subnets, subnetToDelete string) error {

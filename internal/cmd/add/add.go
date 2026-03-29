@@ -2,10 +2,8 @@ package add
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -13,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/kyle-burnett/simple-ipam/internal/models"
+	"github.com/kyle-burnett/simple-ipam/internal/utils/fileutil"
 )
 
 var subnet, description, inputFile string
@@ -39,7 +38,6 @@ func init() {
 }
 
 func Add() error {
-	cleanup := true
 	ipamData, err := os.ReadFile(inputFile)
 	if err != nil {
 		return fmt.Errorf("error reading IPAM file: %v", err)
@@ -59,41 +57,7 @@ func Add() error {
 		return fmt.Errorf("error adding subnet: %v", err)
 	}
 
-	updatedYAML, err := yaml.Marshal(&ipam)
-	if err != nil {
-		return fmt.Errorf("error marshaling IPAM: %v", err)
-	}
-
-	tmpFile, err := os.CreateTemp(filepath.Dir(inputFile), "tmp_ipam.*.txt")
-	if err != nil {
-		return fmt.Errorf("error creating temp file: %v", err)
-	}
-
-	defer func() {
-		if cleanup {
-			err := os.Remove(tmpFile.Name())
-			if err != nil {
-				log.Printf("error removing temp file: %v", err)
-			}
-		}
-	}()
-
-	_, err = tmpFile.Write(updatedYAML)
-	if err != nil {
-		_ = tmpFile.Close()
-		return fmt.Errorf("error writing to temp file: %v", err)
-	}
-
-	if err := tmpFile.Close(); err != nil {
-		return fmt.Errorf("error closing temp file: %v", err)
-	}
-
-	err = os.Rename(tmpFile.Name(), inputFile)
-	if err != nil {
-		return fmt.Errorf("error writing IPAM data: %v", err)
-	}
-	cleanup = false
-	return nil
+	return fileutil.WriteYAMLAtomic(inputFile, &ipam)
 }
 
 // Add a subnet to an IPAM file.
