@@ -4,20 +4,22 @@ import (
 	"os"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/kyle-burnett/simple-ipam/internal/models"
 	"github.com/kyle-burnett/simple-ipam/internal/utils/testutils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 func Test_Delete(t *testing.T) {
 	testFile, err := testutils.CreateTestFile("testDelete.yaml")
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("unexpected error creating test file: %v", err)
+	}
 	defer os.Remove(testFile)
 
-	err = Delete(testFile, "10.10.0.0/24", false)
-	require.NoError(t, err)
+	if err = Delete(testFile, "10.10.0.0/24", false); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	expectedYAML := models.IPAM{
 		Subnets: map[string]models.Subnets{
@@ -29,41 +31,64 @@ func Test_Delete(t *testing.T) {
 		},
 	}
 
-	expectedYamlData, err := yaml.Marshal(&expectedYAML)
-	require.NoError(t, err)
+	want, err := yaml.Marshal(&expectedYAML)
+	if err != nil {
+		t.Fatalf("unexpected error marshaling expected YAML: %v", err)
+	}
 
-	ipamFile, err := os.ReadFile(testFile)
-	require.NoError(t, err)
+	got, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("unexpected error reading file: %v", err)
+	}
 
-	assert.Equal(t, string(expectedYamlData), string(ipamFile))
+	if string(got) != string(want) {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
 }
 
 func Test_DeleteRecursive(t *testing.T) {
 	testFile, err := testutils.CreateTestFile("testDeleteRecursive.yaml")
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("unexpected error creating test file: %v", err)
+	}
 	defer os.Remove(testFile)
 
-	err = Delete(testFile, "10.10.0.0/20", true)
-	require.NoError(t, err)
+	if err = Delete(testFile, "10.10.0.0/20", true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	expectedYAML := models.IPAM{
 		Subnets: map[string]models.Subnets{},
 	}
 
-	expectedYamlData, err := yaml.Marshal(&expectedYAML)
-	require.NoError(t, err)
+	want, err := yaml.Marshal(&expectedYAML)
+	if err != nil {
+		t.Fatalf("unexpected error marshaling expected YAML: %v", err)
+	}
 
-	ipamFile, err := os.ReadFile(testFile)
-	require.NoError(t, err)
+	got, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("unexpected error reading file: %v", err)
+	}
 
-	assert.Equal(t, string(expectedYamlData), string(ipamFile))
+	if string(got) != string(want) {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
 }
 
 func Test_DeleteNoRecursive(t *testing.T) {
 	testFile, err := testutils.CreateTestFile("testDeleteNoRecursive.yaml")
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("unexpected error creating test file: %v", err)
+	}
 	defer os.Remove(testFile)
 
+	wantErr := "cannot delete 10.10.0.0/20 as subnets are defined under it. Use '-r' or '--recursive' to delete 10.10.0.0/20 and everything defined under it"
 	err = Delete(testFile, "10.10.0.0/20", false)
-	assert.EqualError(t, err, "cannot delete 10.10.0.0/20 as subnets are defined under it. Use '-r' or '--recursive' to delete 10.10.0.0/20 and everything defined under it")
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if err.Error() != wantErr {
+		t.Errorf("got error %q, want %q", err.Error(), wantErr)
+	}
 }

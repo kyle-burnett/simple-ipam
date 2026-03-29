@@ -1,24 +1,25 @@
 package add
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/kyle-burnett/simple-ipam/internal/models"
 	"github.com/kyle-burnett/simple-ipam/internal/utils/testutils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 func Test_AddSubnet(t *testing.T) {
 	testFile, err := testutils.CreateTestFile("testAdd.yaml")
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("unexpected error creating test file: %v", err)
+	}
 	defer os.Remove(testFile)
 
-	err = Add(testFile, "10.10.0.0/25", "test subnet", []string{})
-	require.NoError(t, err)
+	if err = Add(testFile, "10.10.0.0/25", "test subnet", []string{}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	expectedYAML := models.IPAM{
 		Subnets: map[string]models.Subnets{
@@ -42,22 +43,31 @@ func Test_AddSubnet(t *testing.T) {
 		},
 	}
 
-	expectedYamlData, err := yaml.Marshal(&expectedYAML)
-	require.NoError(t, err)
+	want, err := yaml.Marshal(&expectedYAML)
+	if err != nil {
+		t.Fatalf("unexpected error marshaling expected YAML: %v", err)
+	}
 
-	ipamFile, err := os.ReadFile(testFile)
-	require.NoError(t, err)
+	got, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("unexpected error reading file: %v", err)
+	}
 
-	assert.Equal(t, string(expectedYamlData), string(ipamFile))
+	if string(got) != string(want) {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
 }
 
 func Test_AddSupernet(t *testing.T) {
 	testFile, err := testutils.CreateTestFile("testSupernet.yaml")
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("unexpected error creating test file: %v", err)
+	}
 	defer os.Remove(testFile)
 
-	err = Add(testFile, "10.10.0.0/22", "test subnet", []string{})
-	require.NoError(t, err)
+	if err = Add(testFile, "10.10.0.0/22", "test subnet", []string{}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	expectedYAML := models.IPAM{
 		Subnets: map[string]models.Subnets{
@@ -81,38 +91,59 @@ func Test_AddSupernet(t *testing.T) {
 		},
 	}
 
-	expectedYamlData, err := yaml.Marshal(&expectedYAML)
-	require.NoError(t, err)
+	want, err := yaml.Marshal(&expectedYAML)
+	if err != nil {
+		t.Fatalf("unexpected error marshaling expected YAML: %v", err)
+	}
 
-	ipamFile, err := os.ReadFile(testFile)
-	require.NoError(t, err)
+	got, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("unexpected error reading file: %v", err)
+	}
 
-	assert.Equal(t, string(expectedYamlData), string(ipamFile))
+	if string(got) != string(want) {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
 }
 
-func Test_InvalidSubnet(t *testing.T) {
-	testFile, err := testutils.CreateTestFile("testInvalidSubnet.yaml")
-	require.NoError(t, err)
+func Test_AddErrors(t *testing.T) {
+	testFile, err := testutils.CreateTestFile("testAddErrors.yaml")
+	if err != nil {
+		t.Fatalf("unexpected error creating test file: %v", err)
+	}
 	defer os.Remove(testFile)
 
-	err = Add(testFile, "10.10.0.0/222", "test subnet", []string{})
-	assert.EqualError(t, err, "invalid subnet: error parsing existing CIDR: invalid CIDR address: 10.10.0.0/222")
-}
+	tests := []struct {
+		name    string
+		subnet  string
+		wantErr string
+	}{
+		{
+			name:    "invalid subnet",
+			subnet:  "10.10.0.0/222",
+			wantErr: "invalid subnet: error parsing existing CIDR: invalid CIDR address: 10.10.0.0/222",
+		},
+		{
+			name:    "invalid notation",
+			subnet:  "10.10.0.100/22",
+			wantErr: "invalid subnet: 10.10.0.100/22 is not valid CIDR notation",
+		},
+		{
+			name:    "duplicate subnet",
+			subnet:  "10.10.0.0/20",
+			wantErr: "error adding subnet: \"10.10.0.0/20\" already exists in this IPAM file",
+		},
+	}
 
-func Test_InvalidNotation(t *testing.T) {
-	testFile, err := testutils.CreateTestFile("testInvalidNotation.yaml")
-	require.NoError(t, err)
-	defer os.Remove(testFile)
-
-	err = Add(testFile, "10.10.0.100/22", "test subnet", []string{})
-	assert.EqualError(t, err, fmt.Sprintf("invalid subnet: %s is not valid CIDR notation", "10.10.0.100/22"))
-}
-
-func Test_DuplicateSubnet(t *testing.T) {
-	testFile, err := testutils.CreateTestFile("testDuplicateSubnet.yaml")
-	require.NoError(t, err)
-	defer os.Remove(testFile)
-
-	err = Add(testFile, "10.10.0.0/20", "test subnet", []string{})
-	assert.EqualError(t, err, "error adding subnet: \"10.10.0.0/20\" already exists in this IPAM file")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := Add(testFile, tt.subnet, "test subnet", []string{})
+			if err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if err.Error() != tt.wantErr {
+				t.Errorf("got error %q, want %q", err.Error(), tt.wantErr)
+			}
+		})
+	}
 }

@@ -4,36 +4,48 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
 	"github.com/kyle-burnett/simple-ipam/internal/models"
 )
 
 func Test_InitCommand(t *testing.T) {
-	err := Initialize("test", "test")
-	require.NoError(t, err)
+	if err := Initialize("test", "test"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	defer os.Remove("test.yaml")
 
 	ipamFile, err := os.ReadFile("test.yaml")
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatalf("unexpected error reading file: %v", err)
+	}
 
 	expectedYAML := models.IPAM{
 		Description: "test",
 		Subnets:     map[string]models.Subnets{},
 	}
-	expectedYamlData, err := yaml.Marshal(&expectedYAML)
-	require.NoError(t, err)
+	want, err := yaml.Marshal(&expectedYAML)
+	if err != nil {
+		t.Fatalf("unexpected error marshaling expected YAML: %v", err)
+	}
 
-	assert.Equal(t, string(expectedYamlData), string(ipamFile))
+	if string(ipamFile) != string(want) {
+		t.Errorf("got:\n%s\nwant:\n%s", ipamFile, want)
+	}
 }
 
 func Test_InitCommand_FileAlreadyExists(t *testing.T) {
-	err := Initialize("test", "test")
-	require.NoError(t, err)
+	if err := Initialize("test", "test"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	defer os.Remove("test.yaml")
 
-	err = Initialize("test", "test")
-	assert.EqualError(t, err, "IPAM file test.yaml already exists")
+	wantErr := "IPAM file test.yaml already exists"
+	err := Initialize("test", "test")
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if err.Error() != wantErr {
+		t.Errorf("got error %q, want %q", err.Error(), wantErr)
+	}
 }
