@@ -2,22 +2,24 @@ package initialize
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
-	"log"
 	"os"
 
-	"github.com/kyle-burnett/simple-ipam/internal/models"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
+
+	"github.com/kyle-burnett/simple-ipam/internal/models"
+	"github.com/kyle-burnett/simple-ipam/internal/utils/fileutil"
 )
 
 var file, description string
 
 var InitCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Initialize an empty IPAM file",
-	Run: func(cmd *cobra.Command, args []string) {
-		Initialize()
+	Use:          "init",
+	Short:        "Initialize an empty IPAM file",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return Initialize(file, description)
 	},
 }
 
@@ -26,27 +28,18 @@ func init() {
 	InitCmd.Flags().StringVarP(&description, "description", "d", "", "Root IPAM file description")
 }
 
-func Initialize() {
+func Initialize(file, description string) error {
+	fileName := file + ".yaml"
+	if _, err := os.Stat(fileName); err == nil {
+		return fmt.Errorf("IPAM file %v already exists", fileName)
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+
 	ipam := models.IPAM{
 		Subnets:     make(map[string]models.Subnets),
 		Description: description,
 	}
 
-	yamlData, err := yaml.Marshal(&ipam)
-	if err != nil {
-		log.Printf("Error while marshaling YAML: %v", err)
-		return
-	}
-
-	fileName := file + ".yaml"
-	if _, err = os.Stat(fileName); errors.Is(err, fs.ErrNotExist) {
-		err = os.WriteFile(fileName, yamlData, 0644)
-		if err != nil {
-			log.Printf("Unable to create IPAM file: %v", err)
-		}
-	} else if err == nil {
-		log.Printf("IPAM file %v already exists", fileName)
-	} else {
-		log.Print(err)
-	}
+	return fileutil.WriteYAMLAtomic(fileName, &ipam)
 }

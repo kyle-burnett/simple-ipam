@@ -1,53 +1,39 @@
 package initialize
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
+
+	"github.com/kyle-burnett/simple-ipam/internal/models"
 )
 
 func Test_InitCommand(t *testing.T) {
-	cmd := InitCmd
-	cmd.SetArgs([]string{
-		fmt.Sprintf("-d=%s", "test"),
-		fmt.Sprintf("-f=%s", "test"),
-	})
-
-	err := cmd.Execute()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer func() {
-		err := os.Remove("test.yaml")
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	err := Initialize("test", "test")
+	require.NoError(t, err)
+	defer os.Remove("test.yaml")
 
 	ipamFile, err := os.ReadFile("test.yaml")
-	if err != nil {
-		t.Fatalf("Error reading YAML file: %v", err)
-	}
+	require.NoError(t, err)
 
-	expectedYAML := `
-  description: test
-  subnets: {}
-`
-
-	var expectedData interface{}
-	if err := yaml.Unmarshal([]byte(expectedYAML), &expectedData); err != nil {
-		t.Fatalf("Error unmarshaling expected YAML: %v", err)
+	expectedYAML := models.IPAM{
+		Description: "test",
+		Subnets:     map[string]models.Subnets{},
 	}
+	expectedYamlData, err := yaml.Marshal(&expectedYAML)
+	require.NoError(t, err)
 
-	var actualData interface{}
-	if err := yaml.Unmarshal(ipamFile, &actualData); err != nil {
-		t.Fatalf("Error unmarshaling actual YAML: %v", err)
-	}
+	assert.Equal(t, string(expectedYamlData), string(ipamFile))
+}
 
-	if fmt.Sprintf("%v", actualData) != fmt.Sprintf("%v", expectedData) {
-		t.Errorf("YAML content does not match expected content")
-	}
+func Test_InitCommand_FileAlreadyExists(t *testing.T) {
+	err := Initialize("test", "test")
+	require.NoError(t, err)
+	defer os.Remove("test.yaml")
+
+	err = Initialize("test", "test")
+	assert.EqualError(t, err, "IPAM file test.yaml already exists")
 }
