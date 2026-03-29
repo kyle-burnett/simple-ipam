@@ -1,7 +1,7 @@
 package testutils
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/kyle-burnett/simple-ipam/internal/models"
@@ -27,19 +27,16 @@ func CreateTestFile(fileName string) (string, error) {
 
 	yamlData, err := yaml.Marshal(&ipamData)
 	if err != nil {
-		log.Printf("Error while Marshaling. %v", err)
-		return "", err
+		return "", fmt.Errorf("error marshaling YAML: %v", err)
 	}
 
 	if _, err = os.Stat(fileName); err == nil {
-		log.Print("File already exists")
-		return "", err
+		return "", fmt.Errorf("file already exists: %s", fileName)
 	}
 
 	err = os.WriteFile(fileName, yamlData, 0644)
 	if err != nil {
-		log.Print("Unable to write data into the file")
-		return "", err
+		return "", fmt.Errorf("error writing test file: %v", err)
 	}
 
 	return fileName, nil
