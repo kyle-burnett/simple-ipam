@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -70,23 +68,15 @@ func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd, description st
 			return err
 		}
 		if isSubnet {
-			// We reached the end. No need to continue checking.
 			if len(values.Subnets) == 0 {
-				if _, ok := values.Subnets[subnetToAdd]; !ok {
-					values.Subnets[subnetToAdd] = models.Subnets{
-						Description: description,
-						Tags:        tags,
-						Subnets:     map[string]models.Subnets{},
-					}
+				values.Subnets[subnetToAdd] = models.Subnets{
+					Description: description,
+					Tags:        tags,
+					Subnets:     map[string]models.Subnets{},
 				}
 				return nil
-			} else {
-				err := addsubnet(values.Subnets, subnetToAdd, description, tags)
-				if err != nil {
-					return err
-				}
 			}
-			return nil
+			return addsubnet(values.Subnets, subnetToAdd, description, tags)
 		}
 	}
 	allSubnets[subnetToAdd] = models.Subnets{
@@ -126,11 +116,11 @@ func isSubnetOf(subnet, subnetToAdd string) (bool, error) {
 		return false, fmt.Errorf("error parsing subnet to add: %v", err)
 	}
 
-	existingsubnetMask, _ := strconv.Atoi(strings.Split(subnet, "/")[1])
-	subnetToAddMask, _ := strconv.Atoi(strings.Split(subnetToAdd, "/")[1])
+	existingOnes, _ := existingNet.Mask.Size()
+	subnetToAddOnes, _ := subnetNet.Mask.Size()
 
 	if existingNet.Contains(subnetNet.IP) {
-		return subnetToAddMask >= existingsubnetMask, nil
+		return subnetToAddOnes >= existingOnes, nil
 	}
 
 	return false, nil
@@ -138,23 +128,21 @@ func isSubnetOf(subnet, subnetToAdd string) (bool, error) {
 
 // Check if subnetToAdd is a supernet of existingsubnet
 func isSupernetOf(existingsubnet, subnetToAdd string) (bool, error) {
-	// Parse the existing subnet
 	_, existingNet, err := net.ParseCIDR(existingsubnet)
 	if err != nil {
 		return false, fmt.Errorf("error parsing existing subnet: %v", err)
 	}
 
-	// Parse the subnet to add
 	_, subnetNet, err := net.ParseCIDR(subnetToAdd)
 	if err != nil {
 		return false, fmt.Errorf("error parsing subnet to add: %v", err)
 	}
 
-	existingsubnetMask, _ := strconv.Atoi(strings.Split(existingsubnet, "/")[1])
-	subnetToAddMask, _ := strconv.Atoi(strings.Split(subnetToAdd, "/")[1])
+	existingOnes, _ := existingNet.Mask.Size()
+	subnetToAddOnes, _ := subnetNet.Mask.Size()
 
 	if subnetNet.Contains(existingNet.IP) {
-		return subnetToAddMask <= existingsubnetMask, nil
+		return subnetToAddOnes <= existingOnes, nil
 	}
 
 	return false, nil
