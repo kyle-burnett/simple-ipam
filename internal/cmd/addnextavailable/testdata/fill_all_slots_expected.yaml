@@ -1,0 +1,22 @@
+description: ""
+subnets:
+    10.0.0.0/24:
+        description: parent
+        tags: []
+        subnets:
+            10.0.0.0/26:
+                description: slot 1
+                tags: []
+                subnets: {}
+            10.0.0.64/26:
+                description: slot 2
+                tags: []
+                subnets: {}
+            10.0.0.128/26:
+                description: slot 3
+                tags: []
+                subnets: {}
+            10.0.0.192/26:
+                description: slot 4
+                tags: []
+                subnets: {}

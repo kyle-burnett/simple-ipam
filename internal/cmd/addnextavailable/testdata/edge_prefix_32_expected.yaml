@@ -1,0 +1,22 @@
+description: ""
+subnets:
+    10.0.0.0/30:
+        description: parent
+        tags: []
+        subnets:
+            10.0.0.0/32:
+                description: ""
+                tags: []
+                subnets: {}
+            10.0.0.1/32:
+                description: ""
+                tags: []
+                subnets: {}
+            10.0.0.2/32:
+                description: ""
+                tags: []
+                subnets: {}
+            10.0.0.3/32:
+                description: ""
+                tags: []
+                subnets: {}

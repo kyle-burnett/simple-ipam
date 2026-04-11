@@ -1,0 +1,18 @@
+description: ""
+subnets:
+    10.0.0.0/16:
+        description: outer
+        tags: []
+        subnets:
+            10.0.0.0/20:
+                description: middle
+                tags: []
+                subnets:
+                    10.0.0.0/24:
+                        description: inner
+                        tags: []
+                        subnets:
+                            10.0.0.0/26:
+                                description: deep
+                                tags: []
+                                subnets: {}

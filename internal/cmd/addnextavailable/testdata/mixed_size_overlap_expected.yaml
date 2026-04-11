@@ -1,0 +1,14 @@
+description: ""
+subnets:
+    10.0.0.0/24:
+        description: parent
+        tags: []
+        subnets:
+            10.0.0.64/26:
+                description: existing /26
+                tags: []
+                subnets: {}
+            10.0.0.128/25:
+                description: upper half
+                tags: []
+                subnets: {}

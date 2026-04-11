@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/kyle-burnett/simple-ipam/internal/cmd/add"
+	"github.com/kyle-burnett/simple-ipam/internal/cmd/addnextavailable"
 	"github.com/kyle-burnett/simple-ipam/internal/cmd/delete"
 	"github.com/kyle-burnett/simple-ipam/internal/cmd/initialize"
 	"github.com/spf13/cobra"
@@ -32,6 +33,7 @@ func generateMarkdownDocs(cmd *cobra.Command) error {
 
 func Execute() {
 	rootCmd.AddCommand(add.AddCmd)
+	rootCmd.AddCommand(addnextavailable.AddNextAvailableCmd)
 	rootCmd.AddCommand(delete.DeleteCmd)
 	rootCmd.AddCommand(initialize.InitCmd)
 	rootCmd.AddCommand(genDocsCmd)

@@ -2,7 +2,6 @@ package add
 
 import (
 	"fmt"
-	"net"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/kyle-burnett/simple-ipam/internal/models"
 	"github.com/kyle-burnett/simple-ipam/internal/utils/fileutil"
+	"github.com/kyle-burnett/simple-ipam/internal/utils/subnetutils"
 )
 
 var subnet, description, inputFile string
@@ -45,7 +45,7 @@ func Add(inputFile, subnet, description string, tags []string) error {
 		return fmt.Errorf("error unmarshaling IPAM: %v", err)
 	}
 
-	err = checkValidSubnet(subnet)
+	err = subnetutils.CheckValidSubnet(subnet)
 	if err != nil {
 		return fmt.Errorf("invalid subnet: %v", err)
 	}
@@ -63,7 +63,7 @@ func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd, description st
 		if subnet == subnetToAdd {
 			return fmt.Errorf("%#v already exists in this IPAM file", subnetToAdd)
 		}
-		isSubnet, err := isSubnetOf(subnet, subnetToAdd)
+		isSubnet, err := subnetutils.IsSubnetOf(subnet, subnetToAdd)
 		if err != nil {
 			return err
 		}
@@ -92,62 +92,6 @@ func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd, description st
 	return nil
 }
 
-// Check if the subnet from user input is valid
-func checkValidSubnet(subnetToAdd string) error {
-	_, existingNet, err := net.ParseCIDR(subnetToAdd)
-	if err != nil {
-		return fmt.Errorf("error parsing existing CIDR: %v", err)
-	}
-	if subnetToAdd != existingNet.String() {
-		return fmt.Errorf("%v is not valid CIDR notation", subnetToAdd)
-	}
-	return nil
-}
-
-// Check if subnetToAdd is a subnet of an existing network
-func isSubnetOf(subnet, subnetToAdd string) (bool, error) {
-	_, existingNet, err := net.ParseCIDR(subnet)
-	if err != nil {
-		return false, fmt.Errorf("error parsing existing subnet: %v", err)
-	}
-
-	_, subnetNet, err := net.ParseCIDR(subnetToAdd)
-	if err != nil {
-		return false, fmt.Errorf("error parsing subnet to add: %v", err)
-	}
-
-	existingOnes, _ := existingNet.Mask.Size()
-	subnetToAddOnes, _ := subnetNet.Mask.Size()
-
-	if existingNet.Contains(subnetNet.IP) {
-		return subnetToAddOnes >= existingOnes, nil
-	}
-
-	return false, nil
-}
-
-// Check if subnetToAdd is a supernet of existingsubnet
-func isSupernetOf(existingsubnet, subnetToAdd string) (bool, error) {
-	_, existingNet, err := net.ParseCIDR(existingsubnet)
-	if err != nil {
-		return false, fmt.Errorf("error parsing existing subnet: %v", err)
-	}
-
-	_, subnetNet, err := net.ParseCIDR(subnetToAdd)
-	if err != nil {
-		return false, fmt.Errorf("error parsing subnet to add: %v", err)
-	}
-
-	existingOnes, _ := existingNet.Mask.Size()
-	subnetToAddOnes, _ := subnetNet.Mask.Size()
-
-	if subnetNet.Contains(existingNet.IP) {
-		return subnetToAddOnes <= existingOnes, nil
-	}
-
-	return false, nil
-}
-
 // Re-arrange the IPAM hierarchy after adding a new subnet.
 // For example if we have:
 //
@@ -169,7 +113,7 @@ func rearrangeSubnets(allSubnets map[string]models.Subnets, subnetToAdd string) 
 		if subnet == subnetToAdd {
 			continue
 		}
-		isSupernet, err := isSupernetOf(subnet, subnetToAdd)
+		isSupernet, err := subnetutils.IsSupernetOf(subnet, subnetToAdd)
 		if err != nil {
 			return err
 		}
