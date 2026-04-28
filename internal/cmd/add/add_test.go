@@ -59,6 +59,41 @@ func Test_AddSupernet(t *testing.T) {
 	}
 }
 
+func Test_AddSupernetMultipleChildren(t *testing.T) {
+	const seed = `description: ""
+subnets:
+    10.10.0.0/22:
+        description: first
+        tags: []
+        subnets: {}
+    10.10.4.0/22:
+        description: second
+        tags: []
+        subnets: {}
+`
+	testFile := "testMultiChild.yaml"
+	if err := os.WriteFile(testFile, []byte(seed), 0o644); err != nil {
+		t.Fatalf("unexpected error writing seed file: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Remove(testFile) })
+
+	if err := Add(testFile, "10.10.0.0/21", "parent", []string{}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want, err := os.ReadFile("testdata/add_supernet_multi_child_expected.yaml")
+	if err != nil {
+		t.Fatalf("unexpected error reading fixture: %v", err)
+	}
+	got, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("unexpected error reading output: %v", err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
 func Test_AddErrors(t *testing.T) {
 	testFile, err := testutils.CreateTestFile("testAddErrors.yaml")
 	if err != nil {

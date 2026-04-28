@@ -1,0 +1,14 @@
+description: ""
+subnets:
+    10.10.0.0/21:
+        description: parent
+        tags: []
+        subnets:
+            10.10.0.0/22:
+                description: first
+                tags: []
+                subnets: {}
+            10.10.4.0/22:
+                description: second
+                tags: []
+                subnets: {}

@@ -108,7 +108,13 @@ func addsubnet(allSubnets map[string]models.Subnets, subnetToAdd, description st
 //				10.10.0.0/22:
 //					10.10.0.0/24:
 func rearrangeSubnets(allSubnets map[string]models.Subnets, subnetToAdd string) error {
-	for subnet, values := range allSubnets {
+	parent, ok := allSubnets[subnetToAdd]
+	if !ok {
+		return nil
+	}
+
+	var toMove []string
+	for subnet := range allSubnets {
 		// Don't add subnetToAdd under itself
 		if subnet == subnetToAdd {
 			continue
@@ -118,14 +124,13 @@ func rearrangeSubnets(allSubnets map[string]models.Subnets, subnetToAdd string) 
 			return err
 		}
 		if isSupernet {
-			childMap := values
-			if subnets, ok := allSubnets[subnetToAdd]; ok {
-				subnetMap := subnets.Subnets
-				subnetMap[subnet] = childMap
-				delete(allSubnets, subnet)
-				return nil
-			}
+			toMove = append(toMove, subnet)
 		}
+	}
+
+	for _, subnet := range toMove {
+		parent.Subnets[subnet] = allSubnets[subnet]
+		delete(allSubnets, subnet)
 	}
 	return nil
 }
